@@ -63,21 +63,35 @@ class Command:
         if not proto:
             return None
         name = proto.find('name').text
+        if name == 'glGetVkProcAddrNV':
+            return None
+        ptype = proto.find('ptype')
+        rtype = 'void'
+        if ptype is not None:
+            rtype = ''
+            if proto.text:
+                rtype += proto.text
+            rtype += ptype.text
+            if ptype.tail:
+                rtype += ptype.tail
+            rtype = rtype.strip()
         parameters = []
         for param in node.iter('param'):
             parameter = Parameter.from_xml(param)
             if not parameter:
                 return None
             parameters.append(parameter)
-        return Command(name, parameters=parameters)
+        return Command(name, return_type=rtype, parameters=parameters)
 
     def gen_c(self):
         params = ', '.join(param.gen_c() for param in self.parameters)
         yield '{} {}({}) {{'.format(self.return_type, self.name, params)
-        yield '  static void (*real_call)({}) = NULL;'.format(params)
+        yield '  static {} (*real_call)({}) = NULL;'.format(self.return_type, params)
         yield '  PumpkintownCall call;'
         yield '  pumpkintown_set_call_name(&call, "{}");'.format(self.name)
         for param in self.parameters:
+            if param.ptype.strip().endswith('*'):
+                continue
             yield '  pumpkintown_append_call_arg(&call, pumpkintown_wrap_{}({}));'.format(
                 param.ptype, param.name)
         yield '  init_libgl();'
@@ -85,7 +99,8 @@ class Command:
         yield '    real_call = dlsym(libgl, "{}");'.format(self.name)
         yield '  }'
         args = ', '.join(param.name for param in self.parameters)
-        yield '  real_call({});'.format(args)
+        maybe_ret = '' if self.return_type == 'void' else 'return '
+        yield '  {}real_call({});'.format(maybe_ret, args)
         yield '}'
 
 
@@ -99,7 +114,10 @@ class Parameter:
         name = node.find('name')
         ptype = node.find('ptype')
         if ptype is not None and ' ' not in ptype.text:
-            return cls(name.text, ptype=ptype.text)
+            full_type = ptype.text
+            if ptype.tail is not None:
+                full_type += ptype.tail
+            return cls(name.text, ptype=full_type)
 
     def gen_c(self):
         return '{} {}'.format(self.ptype, self.name)
