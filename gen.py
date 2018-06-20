@@ -63,18 +63,17 @@ class Command:
         if not proto:
             return None
         name = proto.find('name').text
-        if name == 'glGetVkProcAddrNV':
+        if name in ('glGetVkProcAddrNV', 'glXAssociateDMPbufferSGIX',
+                    'glXGetProcAddress', 'glXCreateGLXVideoSourceSGIX',
+                    'glXGetProcAddressARB', 'glXGetSwapIntervalMESA',
+                    'glDebugMessageCallbackKHR'):
             return None
         ptype = proto.find('ptype')
-        rtype = 'void'
+        rtype = proto.text if proto.text else ''
         if ptype is not None:
-            rtype = ''
-            if proto.text:
-                rtype += proto.text
             rtype += ptype.text
-            if ptype.tail:
-                rtype += ptype.tail
-            rtype = rtype.strip()
+            rtype += ptype.tail
+        rtype = rtype.strip()
         parameters = []
         for param in node.iter('param'):
             parameter = Parameter.from_xml(param)
@@ -83,20 +82,23 @@ class Command:
             parameters.append(parameter)
         return Command(name, return_type=rtype, parameters=parameters)
 
-    def gen_c(self):
+    def gen_c(self, record_args=True):
         params = ', '.join(param.gen_c() for param in self.parameters)
-        yield '{} {}({}) {{'.format(self.return_type, self.name, params)
+        yield 'GLAPI {} GLAPIENTRY {}({}) {{'.format(self.return_type, self.name, params)
         yield '  static {} (*real_call)({}) = NULL;'.format(self.return_type, params)
         yield '  PumpkintownCall call;'
         yield '  pumpkintown_set_call_name(&call, "{}");'.format(self.name)
-        for param in self.parameters:
-            if param.ptype.strip().endswith('*'):
-                continue
-            yield '  pumpkintown_append_call_arg(&call, pumpkintown_wrap_{}({}));'.format(
-                param.ptype, param.name)
-        yield '  init_libgl();'
+        if record_args:
+            for param in self.parameters:
+                if param.ptype.strip().endswith('*'):
+                    continue
+                yield '  pumpkintown_append_call_arg(&call, pumpkintown_wrap_{}({}));'.format(
+                    param.ptype, param.name)
         yield '  if (!real_call) {'
-        yield '    real_call = dlsym(libgl, "{}");'.format(self.name)
+        yield '    real_call = get_real_proc_addr("{}");'.format(self.name)
+        yield '    if (!real_call) {'
+        yield '      printf("failed to load {}\\n");'.format(self.name)
+        yield '    }'
         yield '  }'
         args = ', '.join(param.name for param in self.parameters)
         maybe_ret = '' if self.return_type == 'void' else 'return '
@@ -113,21 +115,23 @@ class Parameter:
     def from_xml(cls, node):
         name = node.find('name')
         ptype = node.find('ptype')
-        if ptype is not None and ' ' not in ptype.text:
-            full_type = ptype.text
-            if ptype.tail is not None:
-                full_type += ptype.tail
-            return cls(name.text, ptype=full_type)
+        full_type = node.text if node.text else ''
+        if ptype is not None:
+            full_type += ptype.text
+            full_type += ptype.tail
+        return cls(name.text, ptype=full_type.strip())
 
     def gen_c(self):
         return '{} {}'.format(self.ptype, self.name)
 
 
-def gen_c_init_libgl():
-    yield 'void init_libgl() {'
-    yield '  if (!libgl) {'
-    yield '    libgl = dlopen("libGL.so", RTLD_LAZY);'
-    yield '  }'
+def gen_c_get_proc_address(name, commands):
+    yield 'void* get_proc_address_{}(const char* name) {{'.format(name)
+    for command in commands:
+        yield '  if (strcmp(name, "{}") == 0) {{'.format(command.name)
+        yield '    return {};'.format(command.name)
+        yield '  }'
+    yield '  return NULL;'
     yield '}'
 
 
@@ -140,24 +144,31 @@ def write_line(wfile, line):
     wfile.write(line + '\n')
 
 
-def main():
-    tree = ElementTree.parse('gl.xml')
+def parse_xml(name, commands, types):
+    tree = ElementTree.parse(name)
     root = tree.getroot()
 
-    commands = []
-    for command in root.iter('command'):
-        command = Command.from_xml(command)
+    for node in root.iter('command'):
+        command = Command.from_xml(node)
         if command:
             commands.append(command)
+        # else:
+        #     print('skipping', ElementTree.tostring(node))
 
-    types = []
     for node in root.iter('type'):
         gltype = Type.from_xml(node)
         if gltype:
             types.append(gltype)
+
+
+def main():
+    commands = []
     types = [Type('GLhandleARB', 'typedef unsigned int '),
              Type('GLintptr', 'typedef ptrdiff_t '),
-             Type('GLsizeiptr', 'typedef ptrdiff_t ')] + types
+             Type('GLsizeiptr', 'typedef ptrdiff_t ')]
+    parse_xml('gl.xml', commands, types)
+    glx_commands = []
+    parse_xml('glx.xml', glx_commands, [])
 
     with open('pumpkintown_types.h', 'w') as wfile:
         wfile.write('#ifndef PUMPKINTOWN_TYPES_H_\n')
@@ -184,13 +195,27 @@ def main():
             write_lines(wfile, gltype.gen_c_wrap_function())
 
     with open('pumpkintown_commands.c', 'w') as wfile:
-        wfile.write('#include "pumpkintown_call.h"\n')
-        wfile.write('#include "pumpkintown_types.h"\n')
+        write_line(wfile, '#include <GL/gl.h>')
+        write_line(wfile, '#include <stdio.h>')
+        write_line(wfile, '#include <string.h>')
         write_line(wfile, '#include <dlfcn.h>')
-        write_line(wfile, 'static void* libgl = NULL;')
-        write_lines(wfile, gen_c_init_libgl())
+        write_line(wfile, '#include "pumpkintown_call.h"')
+        write_line(wfile, '#include "pumpkintown_dlib.h"')
+        write_line(wfile, '#include "pumpkintown_types.h"')
         for command in commands:
-            write_lines(wfile, command.gen_c())
+            write_lines(wfile, command.gen_c(record_args=False))
+        write_lines(wfile, gen_c_get_proc_address('gl', commands))
+
+    with open('pumpkintown_glx_commands.c', 'w') as wfile:
+        write_line(wfile, '#include <stdio.h>')
+        write_line(wfile, '#include <string.h>')
+        write_line(wfile, '#include <GL/glx.h>')
+        write_line(wfile, '#include <dlfcn.h>')
+        write_line(wfile, '#include "pumpkintown_call.h"')
+        write_line(wfile, '#include "pumpkintown_dlib.h"')
+        for command in glx_commands:
+            write_lines(wfile, command.gen_c(record_args=False))
+        write_lines(wfile, gen_c_get_proc_address('glx', glx_commands))
 
 
 if __name__ == '__main__':
