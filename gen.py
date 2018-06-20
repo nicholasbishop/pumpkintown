@@ -27,9 +27,6 @@ class Type:
                 return None
             return cls(name.text, node.text)
 
-    def gen_c_typedef(self):
-        return '{}{};'.format(self.typedef, self.name)
-
     def gen_c_wrap_function_proto(self):
         yield 'PumpkintownTypeUnion pumpkintown_wrap_{}({} value);'.format(
             self.name, self.name)
@@ -175,8 +172,8 @@ def main():
         wfile.write('#define PUMPKINTOWN_TYPES_H_\n')
         wfile.write('#include <stddef.h>\n')
         wfile.write('#include <stdint.h>\n')
-        for gltype in types:
-            wfile.write(gltype.gen_c_typedef() + '\n')
+        wfile.write('#include <GL/gl.h>\n')
+        wfile.write('typedef int GLclampx;\n')
         write_lines(wfile, gen_c_type_enum(types))
         wfile.write('typedef struct {\n')
         wfile.write('  union {\n')
