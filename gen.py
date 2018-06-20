@@ -63,6 +63,8 @@ class Command:
         if name in ('glGetVkProcAddrNV', 'glXAssociateDMPbufferSGIX',
                     'glXGetProcAddress', 'glXCreateGLXVideoSourceSGIX',
                     'glXGetProcAddressARB', 'glXGetSwapIntervalMESA',
+                    'glDebugMessageCallback', 'glDebugMessageCallbackAMD',
+                    'glDebugMessageCallbackARB',
                     'glDebugMessageCallbackKHR'):
             return None
         ptype = proto.find('ptype')
@@ -91,6 +93,7 @@ class Command:
                     continue
                 yield '  pumpkintown_append_call_arg(&call, pumpkintown_wrap_{}({}));'.format(
                     param.ptype, param.name)
+        yield '  pumpkintown_end_call();'
         yield '  if (!real_call) {'
         yield '    real_call = get_real_proc_addr("{}");'.format(self.name)
         yield '    if (!real_call) {'
@@ -200,7 +203,7 @@ def main():
         write_line(wfile, '#include "pumpkintown_dlib.h"')
         write_line(wfile, '#include "pumpkintown_types.h"')
         for command in commands:
-            write_lines(wfile, command.gen_c(record_args=False))
+            write_lines(wfile, command.gen_c(record_args=True))
         write_lines(wfile, gen_c_get_proc_address('gl', commands))
 
     with open('pumpkintown_glx_commands.c', 'w') as wfile:

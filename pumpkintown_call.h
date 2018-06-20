@@ -12,5 +12,6 @@ typedef struct {
 void pumpkintown_set_call_name(PumpkintownCall* call, const char* name);
 void pumpkintown_append_call_arg(PumpkintownCall* call,
                                  const PumpkintownTypeUnion value);
+void pumpkintown_end_call();
 
 #endif  // PUMPKINTOWN_CALL_H_
