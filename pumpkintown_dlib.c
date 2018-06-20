@@ -26,7 +26,6 @@ void* get_proc_address_glx(const char* name);
 
 void* glXGetProcAddress(const char* name) {
   printf("glXGetProcAddress: looking up %s\n", name);
-  static void* (*real_call)(const char*) = NULL;
   void* result = get_proc_address_gl(name);
   if (result) {
     return result;
@@ -34,15 +33,6 @@ void* glXGetProcAddress(const char* name) {
   result = get_proc_address_glx(name);
   if (result) {
     return result;
-  }
-  if (!real_call) {
-    real_call = dlsym(get_libgl(), "glXGetProcAddress");
-  }
-  if (real_call) {
-    result = real_call(name);
-    if (result) {
-      return result;
-    }
   }
   printf("glXGetProcAddress: %s not found\n", name);
   return NULL;
