@@ -135,6 +135,30 @@ def gen_c_get_proc_address(name, commands):
     yield '}'
 
 
+def gen_cc_replay_command(commands):
+    yield 'void pumpkintown_replay_command_one(const char* name, PumpkintownTypeUnion* args, const int num_args) {'
+    for command in commands:
+        args = []
+        args_valid = True
+        for index, param in enumerate(command.parameters):
+            args.append('args[{}].value.member_{}'.format(index, param.ptype))
+            if '*' in param.ptype:
+                args_valid = False
+        if not args_valid:
+            continue
+        if command.name == 'glFramebufferFetchBarrierEXT':
+            continue
+
+        yield '  if (strcmp(name, "{}") == 0) {{'.format(command.name)
+        params = ', '.join(param.gen_c() for param in command.parameters)
+        yield '    if (num_args == {}) {{'.format(len(command.parameters))
+        yield '      {}({});'.format(command.name, ', '.join(args))
+        yield '    }'
+        yield '    return;'
+        yield '  }'
+    yield '}'
+
+
 def write_lines(wfile, lines):
     for line in lines:
         wfile.write(line + '\n')
@@ -205,6 +229,15 @@ def main():
         for command in commands:
             write_lines(wfile, command.gen_c(record_args=True))
         write_lines(wfile, gen_c_get_proc_address('gl', commands))
+
+    with open('pumpkintown_replay_commands.cc', 'w') as wfile:
+        write_line(wfile, '#include <stdio.h>')
+        write_line(wfile, '#include <stdlib.h>')
+        write_line(wfile, '#include <string.h>')
+        write_line(wfile, '#include <epoxy/gl.h>')
+        write_line(wfile, '#include "pumpkintown_file.h"')
+        write_line(wfile, '#include "pumpkintown_types.h"')
+        write_lines(wfile, gen_cc_replay_command(commands))
 
     with open('pumpkintown_glx_commands.c', 'w') as wfile:
         write_line(wfile, '#include <stdio.h>')

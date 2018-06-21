@@ -8,7 +8,7 @@
 void write_data(const void* data, int length) {
   static FILE* file = NULL;
   if (!file) {
-    file = fopen("trace", "w");
+    file = fopen("trace", "wb");
   }
   fwrite(data, length, 1, file);
   fflush(file);
