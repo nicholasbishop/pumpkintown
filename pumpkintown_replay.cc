@@ -11,9 +11,6 @@
 
 void pumpkintown_replay_command_one(const char* name, PumpkintownTypeUnion* args, const int num_args);
 
-PumpkintownFileTag read_tag(FILE* file, bool* err) {
-  return static_cast<PumpkintownFileTag>(read_uint32(file, err));
-}
 bool pumpkintown_replay_command(FILE *file) {
   bool err = false;
   PumpkintownFileTag tag = read_tag(file, &err);

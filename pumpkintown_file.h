@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "pumpkintown_types.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -15,6 +17,7 @@ typedef enum {
 } PumpkintownFileTag;
 
 uint32_t read_uint32(FILE* file, bool* err);
+PumpkintownFileTag read_tag(FILE* file, bool* err);
 
 #ifdef __cplusplus
 }
