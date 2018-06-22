@@ -13,6 +13,7 @@ add_library(pumpkintown
   pumpkintown_types.c)
 
 add_executable(pumpkintown_replay
+  pumpkintown_file.cc
   pumpkintown_replay.cc
   pumpkintown_replay_commands.cc)
 

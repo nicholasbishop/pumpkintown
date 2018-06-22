@@ -9,18 +9,11 @@
 #include "pumpkintown_file.h"
 #include "pumpkintown_types.h"
 
-uint32_t read_uint32(FILE* file, bool* err) {
-  uint32_t data;
-  *err = fread(&data, sizeof(data), 1, file) == sizeof(data);
-  return data;
-}
+void pumpkintown_replay_command_one(const char* name, PumpkintownTypeUnion* args, const int num_args);
 
 PumpkintownFileTag read_tag(FILE* file, bool* err) {
   return static_cast<PumpkintownFileTag>(read_uint32(file, err));
 }
-
-void pumpkintown_replay_command_one(const char* name, PumpkintownTypeUnion* args, const int num_args);
-
 bool pumpkintown_replay_command(FILE *file) {
   bool err = false;
   PumpkintownFileTag tag = read_tag(file, &err);
