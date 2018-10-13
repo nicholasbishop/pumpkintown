@@ -8,6 +8,8 @@ import subprocess
 
 import attr
 
+import parse_xml
+
 @attr.s
 class Type:
     name = attr.ib()
@@ -128,16 +130,21 @@ def load_glinfo(args):
             printf = typ.get('printf')
             TYPES[name] = Type(name, typ['c'], fb, printf)
 
-        for func in obj['functions']:
-            params = []
-            for param in func.get('parameters', []):
-                params.append(Param(TYPES[param['type']], param['name']))
-            return_type = TYPES[func.get('return', 'Void')]
-            trace = func.get('trace', True)
-            FUNCTIONS.append(Function(func['name'],
-                                      return_type,
-                                      params,
-                                      trace=trace))
+        # for func in obj['functions']:
+        #     params = []
+        #     for param in func.get('parameters', []):
+        #         params.append(Param(TYPES[param['type']], param['name']))
+        #     return_type = TYPES[func.get('return', 'Void')]
+        #     trace = func.get('trace', True)
+        #     FUNCTIONS.append(Function(func['name'],
+        #                               return_type,
+        #                               params,
+        #                               trace=trace))
+
+    path = os.path.join(args.source_dir, 'OpenGL-Registry/xml/gl.xml')
+    commands = parse_xml.parse_xml(path)
+    for command in commands:
+        FUNCTIONS.append(Function(command.name, command.return_type, command.params))
 
 
 # (
