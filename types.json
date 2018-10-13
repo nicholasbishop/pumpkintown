@@ -1,73 +1,96 @@
 [
   {
     "c": "GLbitfield",
-    "capnp": "UInt32",
+    "serialize": "uint32_t",
     "printf": "0x%x"
   },
   {
     "c": "GLboolean",
-    "capnp": "Bool",
+    "serialize": "uint8_t",
+    "printf": "%d"
+  },
+  {
+    "c": "Bool",
+    "serialize": "uint8_t",
     "printf": "%d"
   },
   {
     "c": "GLbyte",
-    "capnp": "Int8",
+    "serialize": "int8_t",
     "printf": "%d"
   },
   {
     "c": "GLclampf",
-    "capnp": "Float32",
+    "serialize": "float",
     "printf": "%f"
   },
   {
     "c": "GLdouble",
-    "capnp": "Float64",
+    "serialize": "double",
     "printf": "%f"
   },
   {
     "c": "GLenum",
-    "capnp": "UInt32",
+    "serialize": "uint32_t",
     "printf": "0x%x"
   },
   {
     "c": "GLhandleARB",
-    "capnp": "UInt32",
+    "serialize": "uint32_t",
     "printf": "%d"
   },
   {
     "c": "GLfixed",
-    "capnp": "Int32",
+    "serialize": "int32_t",
     "printf": "%d"
   },
   {
     "c": "GLfloat",
-    "capnp": "Float32",
+    "serialize": "float",
     "printf": "%f"
   },
   {
     "c": "GLint",
-    "capnp": "Int32",
+    "serialize": "int32_t",
     "printf": "%d"
   },
   {
     "c": "GLshort",
-    "capnp": "Int16",
+    "serialize": "int16_t",
     "printf": "%d"
   },
   {
     "c": "GLsizei",
-    "capnp": "Int32",
+    "serialize": "int32_t",
     "printf": "%d"
   },
   {
     "c": "GLuint",
-    "capnp": "UInt32",
+    "serialize": "uint32_t",
     "printf": "%d"
   },
   {
     "c": "GLuint64",
-    "capnp": "UInt64",
-    "printf": "%llu"
+    "serialize": "uint64_t",
+    "printf": "%lu"
+  },
+  {
+    "c": "int"
+  },
+  {
+    "c": "int *"
+  },
+  {
+    "c": "const GLfloat *"
+  },
+  {
+    "c": "const GLubyte *"
+  },
+  {
+    "c": "const char *"
+  },
+  {
+    "c": "unsigned int *"
   },
   {
     "c": "void"
@@ -83,5 +106,17 @@
   {
     "c": "const GLuint *",
     "printf": "%p"
+  },
+  {
+    "c": "Display *"
+  },
+  {
+    "c": "GLXContext"
+  },
+  {
+    "c": "GLXDrawable"
+  },
+  {
+    "c": "XVisualInfo *"
   }
 ]

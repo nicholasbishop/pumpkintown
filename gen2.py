@@ -11,24 +11,10 @@ import attr
 import parse_xml
 
 
-def underscore_to_camel_case(string):
-    output = ''
-    cap_next = False
-    for char in string:
-        if char == '_':
-            cap_next = True
-        elif cap_next:
-            cap_next = False
-            output += char.upper()
-        else:
-            output += char
-    return output
-
-
 @attr.s
 class Type:
     ctype = attr.ib()
-    capnp = attr.ib()
+    stype = attr.ib()
     printf = attr.ib()
 
     @property
@@ -53,6 +39,10 @@ class Source:
             string = '"{}"'.format(path)
         self.lines.append('#include {}'.format(string))
 
+    def add_guard(self, name):
+        self.lines = ['#ifndef ' + name, '#define ' + name] + self.lines
+        self.lines.append('#endif')
+
     def text(self):
         return '\n'.join(self.lines) + '\n'
 
@@ -69,8 +59,8 @@ class Param:
     def cxx(self):
         return '{} {}'.format(self.ptype.ctype, self.name)
 
-    def capnp_type(self):
-        return self.ptype.capnp
+    def serialize_type(self):
+        return self.ptype.stype
 
 
 @attr.s
@@ -98,15 +88,16 @@ class Function:
             ', '.join(param.ptype.ctype for param in self.params)))
         # Static function pointer to the "real" call
         lines.append('  static Fn real_fn = reinterpret_cast<Fn>(get_real_proc_addr("{}"));'.format(self.name))
-        if self.trace:
-            lines.append('  flatbuffers::FlatBufferBuilder builder(1024);')
-            lines.append('  auto item = CreateTraceItem(builder, Function_{}, '.format(
-                self.capnp_struct_name()))
-            lines.append('      builder.CreateStruct({}({})).Union());'.format(
-                self.capnp_struct_name(),
-                ', '.join(param.name for param in self.params)))
-            lines.append('  builder.Finish(item);')
-            lines.append('  write_trace_item(builder.GetBufferPointer(), builder.GetSize());')
+        if self.is_serializable():
+            lines.append('  pumpkintown::serialize()->write(pumpkintown::FunctionId::{});'.format(
+                self.name))
+            for param in self.params:
+                lines.append('  pumpkintown::serialize()->write(static_cast<{}>({}));'.format(
+                    param.ptype.stype, param.name))
+        else:
+            # TODO
+            pass
+
         # Call the real function and return its value if it has one
         lines.append('  {}real_fn({});'.format(
             'return ' if self.has_return() else '',
@@ -123,7 +114,7 @@ class Function:
 
     def is_serializable(self):
         for param in self.params:
-            if param.capnp_type() is None:
+            if param.serialize_type() is None:
                 return False
         return True
 
@@ -148,23 +139,14 @@ def load_glinfo(args):
 
         for typ in root:
             ctype = typ['c']
-            capnp = typ.get('capnp')
+            stype = typ.get('serialize')
             printf = typ.get('printf')
-            types[ctype] = Type(ctype, capnp, printf)
+            types[ctype] = Type(ctype, stype, printf)
 
-        # for func in obj['functions']:
-        #     params = []
-        #     for param in func.get('parameters', []):
-        #         params.append(Param(TYPES[param['type']], param['name']))
-        #     return_type = TYPES[func.get('return', 'Void')]
-        #     trace = func.get('trace', True)
-        #     FUNCTIONS.append(Function(func['name'],
-        #                               return_type,
-        #                               params,
-        #                               trace=trace))
-
-    path = os.path.join(args.source_dir, 'OpenGL-Registry/xml/gl.xml')
-    commands = parse_xml.parse_xml(path)
+    path1 = os.path.join(args.source_dir, 'OpenGL-Registry/xml/gl.xml')
+    path2 = os.path.join(args.source_dir, 'OpenGL-Registry/xml/glx.xml')
+    commands = parse_xml.parse_xml(path1)
+    commands += parse_xml.parse_xml(path2)
     for command in commands:
         try:
             rtype = types[command.return_type]
@@ -176,25 +158,11 @@ def load_glinfo(args):
             print(err)
 
 
-# (
-#     Function('glClearColor', GlTypes.Void, (Param(GlTypes.Clampf, 'r'),
-#                                             Param(GlTypes.Clampf, 'g'),
-#                                             Param(GlTypes.Clampf, 'b'),
-#                                             Param(GlTypes.Clampf, 'a'))),
-
-
 def gen_exports():
     lines = ['extern "C" {']
     for func in FUNCTIONS:
         lines.append(func.cxx_prototype())
     lines += ['}']
-    return lines
-
-
-def gen_body():
-    lines = []
-    for func in FUNCTIONS:
-        lines += func.cxx_body()
     return lines
 
 
@@ -210,11 +178,33 @@ def gen_hh_file():
 
 def gen_cc_file():
     src = Source()
-    src.add(['#include "pumpkintown_dlib.hh"',
-             '#include "pumpkintown_gl_gen.hh"',
-             '#include "pumpkintown_schema.capnp.h"',
-             'using namespace pumpkintown;'])
-    src.add(gen_body())
+    src.add_cxx_include('cstring', system=True)
+    src.add_cxx_include('pumpkintown_dlib.hh')
+    src.add_cxx_include('pumpkintown_gl_gen.hh')
+    src.add_cxx_include('pumpkintown_serialize.hh')
+    for func in FUNCTIONS:
+        src.add(func.cxx_body())
+    src.add('extern "C" void* glXGetProcAddressARB(const char* name) {')
+    for func in FUNCTIONS:
+        src.add('  if (strcmp(name, "{}") == 0) {{'.format(func.name))
+        src.add('    return reinterpret_cast<void*>(&{});'.format(func.name))
+        src.add('  }')
+    src.add('  fprintf(stderr, "unknown function: %s\\n", name);')
+    src.add('  return nullptr;')
+    src.add('}')
+    return src
+
+
+def gen_function_id_header():
+    src = Source()
+    src.add('namespace pumpkintown {')
+    src.add('enum class FunctionId {')
+    src.add('  Invalid,')
+    for func in FUNCTIONS:
+        src.add('  {},'.format(func.name))
+    src.add('};')
+    src.add('}')
+    src.add_guard('PUMPKINTOWN_FUNCTION_ID_H_')
     return src
 
 
@@ -245,22 +235,31 @@ def gen_dump_cc():
     src = Source()
     src.add_cxx_include('pumpkintown_dump.hh')
     src.add_cxx_include('cstdio', system=True)
-    src.add('using namespace pumpkintown;')
-    src.add('void handle_trace_item(const TraceItem& item) {')
-    src.add('  switch (item.fn_type()) {')
-    src.add('  case Function_NONE:')
+    src.add_cxx_include('pumpkintown_deserialize.hh')
+    src.add_cxx_include('pumpkintown_function_id.hh')
+    src.add('namespace pumpkintown {')
+    src.add('bool handle_trace_item(Deserialize* deserialize) {')
+    src.add('  FunctionId function_id{FunctionId::Invalid};')
+    src.add('  if (!deserialize->read(&function_id)) {')
+    src.add('    return false;')
+    src.add('  }')
+    src.add('  switch (function_id) {')
+    src.add('  case FunctionId::Invalid:')
     src.add('    break;')
     for func in FUNCTIONS:
-        if not func.trace:
+        src.add('  case FunctionId::{}:'.format(func.name))
+        if not func.is_serializable():
+            src.add('    break;')
             continue
-        src.add('  case Function_{}:'.format(func.capnp_struct_name()))
         src.add('    {')
-        if func.params:
-            src.add('      auto* fn = item.fn_as_{}();'.format(func.capnp_struct_name()))
         args = []
         placeholders = []
         for param in func.params:
-            args.append('fn->{}()'.format(param.name))
+            src.add('      {} {};'.format(param.serialize_type(), param.name))
+            src.add('      if (!deserialize->read(&{})) {{'.format(param.name))
+            src.add('        return false;')
+            src.add('      }')
+            args.append(param.name)
             placeholders.append(param.ptype.printf)
         src.add('      printf("{}({});\\n"{}{});'.format(
             func.name,
@@ -270,6 +269,8 @@ def gen_dump_cc():
         src.add('      break;')
         src.add('    }')
     src.add('  }')
+    src.add('  return true;')
+    src.add('}')
     src.add('}')
     return src
 
@@ -285,9 +286,11 @@ def main():
     gen_cc_file().write(os.path.join(args.build_dir, 'pumpkintown_gl_gen.cc'))
     gen_hh_file().write(os.path.join(args.build_dir, 'pumpkintown_gl_gen.hh'))
 
-    path = os.path.join(args.build_dir, 'pumpkintown_schema.capnp')
-    gen_schema_file().write(path)
-    subprocess.check_call(('capnp', 'compile', '-oc++', path))
+    gen_function_id_header().write(os.path.join(args.build_dir, 'pumpkintown_function_id.hh'))
+
+    #path = os.path.join(args.build_dir, 'pumpkintown_schema.capnp')
+    #gen_schema_file().write(path)
+    #subprocess.check_call(('capnp', 'compile', '-oc++', path))
 
     gen_dump_cc().write(os.path.join(args.build_dir, 'pumpkintown_dump_gen.cc'))
 

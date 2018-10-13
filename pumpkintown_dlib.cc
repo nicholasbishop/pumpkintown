@@ -6,6 +6,9 @@
 
 #include <dlfcn.h>
 
+#include "pumpkintown_gl_types.hh"
+#include "pumpkintown_serialize.hh"
+
 void* get_libgl() {
   static void* libgl = NULL;
   if (!libgl) {
@@ -63,4 +66,19 @@ void write_trace_item(const uint8_t* buf, const uint64_t size) {
   write_all(f, size_ptr, sizeof(size));
   write_all(f, buf, size);
   fclose(f);
+}
+
+namespace pumpkintown {
+
+Serialize* serialize() {
+  static Serialize s;
+  if (!s.is_open()) {
+    if (!s.open("trace")) {
+      // TODO
+      fprintf(stderr, "failed to open trace file\n");
+    }
+  }
+  return &s;
+}
+
 }

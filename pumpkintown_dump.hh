@@ -3,8 +3,12 @@
 #ifndef PUMPKINTOWN_DUMP_HH_
 #define PUMPKINTOWN_DUMP_HH_
 
-#include "pumpkintown_schema.capnp.h"
+namespace pumpkintown {
 
-void handle_trace_item(const pumpkintown::Function& item);
+class Deserialize;
+
+bool handle_trace_item(Deserialize* d);
+
+}
 
 #endif  // PUMPKINTOWN_DUMP_HH_

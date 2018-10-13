@@ -6,6 +6,12 @@
 void* get_real_proc_addr(const char* name);
 void* get_real_proc_addr(const unsigned char* name);
 
-void write_trace_item(const uint8_t* buf, uint64_t size);
+namespace pumpkintown {
+
+class Serialize;
+
+Serialize* serialize();
+
+}
 
 #endif  // PUMPKINTOWN_DLIB_H_

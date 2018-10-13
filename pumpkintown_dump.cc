@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "pumpkintown_schema.capnp.h"
+#include "pumpkintown_deserialize.hh"
 
 void read_exact(FILE* f, uint8_t* buf, const uint64_t size) {
   uint64_t bytes_remaining = size;
@@ -19,27 +19,21 @@ void read_exact(FILE* f, uint8_t* buf, const uint64_t size) {
   }
 }
 
-void read_item(FILE* f, std::vector<uint8_t>* vec) {
-  uint64_t size{0};
-  read_exact(f, reinterpret_cast<uint8_t*>(&size), sizeof(size));
-  vec->resize(size);
-  read_exact(f, vec->data(), size);
-}
-
 int main(int argc, char** argv) {
   if (argc != 2) {
     // TODO
     return 1;
   }
 
-  FILE* f = fopen(argv[1], "rb");
-  std::vector<uint8_t> vec;
-  while (!feof(f)) {
-    read_item(f, &vec);
-    capnp::PackedMessageReader message(f);
-    auto trace_item = pumpkintown::GetTraceItem(vec.data());
-    handle_trace_item(*trace_item);
+  pumpkintown::Deserialize d;
+  if (!d.open(argv[1])) {
+    fprintf(stderr, "failed to open %s\n", argv[1]);
+    return 1;
   }
-  
-  fclose(f);
+
+  while (!d.done()) {
+    if (!handle_trace_item(&d)) {
+      fprintf(stderr, "handle_trace_item failed\n");
+    }
+  }
 }
