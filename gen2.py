@@ -12,8 +12,12 @@ import attr
 class Type:
     name = attr.ib()
     ctype = attr.ib()
-    flatbuffer = attr.ib()
+    fbtype = attr.ib()
     printf = attr.ib()
+
+    @property
+    def is_void(self):
+        return self.name == 'Void'
 
 
 class Source:
@@ -47,10 +51,10 @@ class Param:
     name = attr.ib()
 
     def cxx(self):
-        return '{} {}'.format(self.ptype.value, self.name)
+        return '{} {}'.format(self.ptype.ctype, self.name)
 
     def fbs_type(self):
-        return self.ptype.fbs()
+        return self.ptype.fbtype
 
 
 @attr.s
@@ -61,11 +65,11 @@ class Function:
     trace = attr.ib(default=True)
 
     def has_return(self):
-        return self.return_type != GlTypes.Void
+        return not self.return_type.is_void
 
     def cxx_decl(self):
         params = ', '.join(param.cxx() for param in self.params)
-        return '{} {}({})'.format(self.return_type.value, self.name, params)
+        return '{} {}({})'.format(self.return_type.ctype, self.name, params)
 
     def cxx_prototype(self):
         return '{};'.format(self.cxx_decl())
@@ -74,16 +78,16 @@ class Function:
         lines = ['{} {{'.format(self.cxx_decl())]
         # Function type alias
         lines.append('  using Fn = {} (*)({});'.format(
-            self.return_type.value,
-            ', '.join(param.ptype.value for param in self.params)))
+            self.return_type.ctype,
+            ', '.join(param.ptype.ctype for param in self.params)))
         # Static function pointer to the "real" call
         lines.append('  static Fn real_fn = reinterpret_cast<Fn>(get_real_proc_addr("{}"));'.format(self.name))
         if self.trace:
             lines.append('  flatbuffers::FlatBufferBuilder builder(1024);')
             lines.append('  auto item = CreateTraceItem(builder, Function_{}, '.format(
-                self.fbs_struct_name()))
+                self.fb_struct_name()))
             lines.append('      builder.CreateStruct({}({})).Union());'.format(
-                self.fbs_struct_name(),
+                self.fb_struct_name(),
                 ', '.join(param.name for param in self.params)))
             lines.append('  builder.Finish(item);')
             lines.append('  write_trace_item(builder.GetBufferPointer(), builder.GetSize());')
@@ -94,11 +98,11 @@ class Function:
         lines.append('}')
         return lines
 
-    def fbs_struct_name(self):
+    def fb_struct_name(self):
         return 'Fn{}{}'.format(self.name[0].upper(), self.name[1:])
 
-    def fbs_struct(self):
-        lines = ['struct {} {{'.format(self.fbs_struct_name())]
+    def fb_struct(self):
+        lines = ['struct {} {{'.format(self.fb_struct_name())]
         for param in self.params:
             lines.append('  {}: {};'.format(param.name, param.fbs_type()))
         lines.append('}')
@@ -118,18 +122,20 @@ def load_glinfo(args):
 
         for typ in obj['types']:
             name = typ['name']
-            flatbuffer = typ.get('flatbuffer')
+            fb = typ.get('flatbuffer')
             printf = typ.get('printf')
-            TYPES[name] = Type(name, typ['c'], flatbuffer, printf)
+            TYPES[name] = Type(name, typ['c'], fb, printf)
 
         for func in obj['functions']:
             params = []
             for param in func['parameters']:
-                params.append(Param(GlTypes.from_name(param['type']), param['name']))
+                params.append(Param(TYPES[param['type']], param['name']))
+            return_type = TYPES[func.get('return', 'Void')]
+            trace = func.get('trace', True)
             FUNCTIONS.append(Function(func['name'],
-                                      GlTypes.from_name(func['return']),
+                                      return_type,
                                       params,
-                                      trace=func['trace']))
+                                      trace=trace))
 
 
 # (
@@ -190,12 +196,12 @@ def gen_schema_file():
     for func in FUNCTIONS:
         if not func.trace:
             continue
-        lines.append('  {},'.format(func.fbs_struct_name()))
+        lines.append('  {},'.format(func.fb_struct_name()))
     lines.append('}')
     for func in FUNCTIONS:
         if not func.trace:
             continue
-        lines += func.fbs_struct()
+        lines += func.fb_struct()
     lines += ['table TraceItem {',
               '  fn: Function;',
               '}']
@@ -216,14 +222,14 @@ def gen_dump_cc():
     for func in FUNCTIONS:
         if not func.trace:
             continue
-        src.add('  case Function_{}:'.format(func.fbs_struct_name()))
+        src.add('  case Function_{}:'.format(func.fb_struct_name()))
         src.add('    {')
-        src.add('      auto* fn = item.fn_as_{}();'.format(func.fbs_struct_name()))
+        src.add('      auto* fn = item.fn_as_{}();'.format(func.fb_struct_name()))
         args = []
         placeholders = []
         for param in func.params:
             args.append('fn->{}()'.format(param.name))
-            placeholders.append(param.ptype.printf_format_specifier())
+            placeholders.append(param.ptype.printf)
         src.add('      printf("{}({});\\n", {});'.format(
             func.name,
             ', '.join(placeholders),

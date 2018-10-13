@@ -1,3 +1,5 @@
 
-    dnf install flatbuffers
-    flatc --cpp pumpkintown.fbs
+    dnf install flatbuffers flatbuffers-devel
+    
+    mkdir build && cd build && cmake -G Ninja .. && ninja
+    

@@ -5,6 +5,11 @@
     "flatbuffer": "uint32",
     "printf": "0x%x"
   }, {
+    "name": "Bool",
+    "c": "bool",
+    "flatbuffer": "bool",
+    "printf": "%d"
+  }, {
     "name": "Clampf",
     "c": "GLclampf",
     "flatbuffer": "float32",
@@ -50,6 +55,12 @@
     "printf": "%p"
   }],
   "functions": [{
+    "name": "glClear",
+    "parameters": [{
+      "name": "mask",
+      "type": "Bitfield"
+    }]
+  }, {
     "name": "glXCreateContext",
     "trace": false,
     "return": "GLXContext",
@@ -64,7 +75,7 @@
       "type": "GLXContext"
     }, {
       "name": "direct",
-      "type": "bool"
+      "type": "Bool"
     }]
   }]
 }
