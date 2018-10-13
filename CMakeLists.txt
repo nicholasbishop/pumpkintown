@@ -2,11 +2,10 @@ cmake_minimum_required(VERSION 3.0)
 
 project(pumpkintown)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-include_directories(flatbuffers/include)
 
 add_custom_command(
   OUTPUT pumpkintown_gl_gen.cc pumpkintown_gl_gen.hh pumpkintown_function_id.hh pumpkintown_dump_gen.cc
@@ -17,7 +16,6 @@ add_library(pumpkintown
   SHARED
   pumpkintown_dlib.cc
   pumpkintown_gl_gen.cc
-  pumpkintown_init.cc
   pumpkintown_serialize.cc)
 
 add_executable(pumpkintown_dump
