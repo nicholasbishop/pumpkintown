@@ -46,6 +46,10 @@
     "c": "void*",
     "printf": "%p"
   }, {
+    "name": "GLXDrawable",
+    "c": "void*",
+    "printf": "%p"
+  }, {
     "name": "Pixmap",
     "c": "void*",
     "printf": "%p"
@@ -53,12 +57,54 @@
     "name": "XVisualInfoPtr",
     "c": "void*",
     "printf": "%p"
+  }, {
+    "name": "int",
+    "c": "int",
+    "printf": "%p"
+  }, {
+    "name": "unsigned_int_ptr",
+    "c": "unsigned int*",
+    "printf": "%p"
   }],
   "functions": [{
     "name": "glClear",
     "parameters": [{
       "name": "mask",
       "type": "Bitfield"
+    }]
+  }, {
+    "name": "glEnable",
+    "parameters": [{
+      "name": "cap",
+      "type": "Enum"
+    }]
+  }, {
+    "name": "glLoadIdentity"
+  }, {
+    "name": "glDrawBuffer"
+  }, {
+    "name": "glXSwapBuffers"
+  }, {
+    "name": "glGenLists",
+    "return": "Uint",
+    "parameters": [{
+      "name": "range",
+      "type": "Sizei"
+    }]
+  }, {
+    "name": "glNewList",
+    "parameters": [{
+      "name": "list",
+      "type": "Uint"
+    }, {
+      "name": "mode",
+      "type": "Enum"
+    }]
+  }, {
+    "name": "glShadeModel",
+    "parameters": [{
+      "name": "mode",
+      "type": "Enum"
     }]
   }, {
     "name": "glXCreateContext",
@@ -76,6 +122,32 @@
     }, {
       "name": "direct",
       "type": "Bool"
+    }]
+  }, {
+    "name": "glXDestroyContext",
+    "trace": false,
+    "parameters": [{
+      "name": "dpy",
+      "type": "DisplayPtr"
+    }, {
+      "name": "ctx",
+      "type": "GLXContext"
+    }]
+  }, {
+    "name": "glXQueryDrawable",
+    "trace": false,
+    "parameters": [{
+      "name": "dpy",
+      "type": "DisplayPtr"
+    }, {
+      "name": "draw",
+      "type": "GLXDrawable"
+    }, {
+      "name": "attribute",
+      "type": "int"
+    }, {
+      "name": "value",
+      "type": "unsigned_int_ptr"
     }]
   }]
 }

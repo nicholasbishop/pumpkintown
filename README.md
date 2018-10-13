@@ -1,5 +1,5 @@
+## Building
 
-    dnf install flatbuffers flatbuffers-devel
-    
+    git submodule update --init
     mkdir build && cd build && cmake -G Ninja .. && ninja
     

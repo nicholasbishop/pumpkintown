@@ -105,6 +105,8 @@ class Function:
         lines = ['struct {} {{'.format(self.fb_struct_name())]
         for param in self.params:
             lines.append('  {}: {};'.format(param.name, param.fbs_type()))
+        if not self.params:
+            lines.append('  dummy: bool;')
         lines.append('}')
         return lines
 
@@ -128,7 +130,7 @@ def load_glinfo(args):
 
         for func in obj['functions']:
             params = []
-            for param in func['parameters']:
+            for param in func.get('parameters', []):
                 params.append(Param(TYPES[param['type']], param['name']))
             return_type = TYPES[func.get('return', 'Void')]
             trace = func.get('trace', True)
@@ -139,19 +141,10 @@ def load_glinfo(args):
 
 
 # (
-#     Function('glClear', GlTypes.Void, (Param(GlTypes.Bitfield, 'mask'),)),
 #     Function('glClearColor', GlTypes.Void, (Param(GlTypes.Clampf, 'r'),
 #                                             Param(GlTypes.Clampf, 'g'),
 #                                             Param(GlTypes.Clampf, 'b'),
 #                                             Param(GlTypes.Clampf, 'a'))),
-#     Function('glEnable', GlTypes.Void, (Param(GlTypes.Enum, 'cap'),)),
-#     Function('glGenLists', GlTypes.Uint, (Param(GlTypes.Sizei, 'range'),)),
-#     Function('glXCreateContext', GlTypes.GLXContext ( Display *dpy, XVisualInfo *vis,
-# 				    GLXContext shareList, Bool direct );
-#     Function('glXDestroyContext', GlTypes.Void, (Param(GlTypes.DisplayPtr, 'dpy'),
-#                                                  Param(GlTypes.GLXContext, 'ctx')),
-#              trace=False)
-# )
 
 
 def gen_exports():
@@ -224,15 +217,17 @@ def gen_dump_cc():
             continue
         src.add('  case Function_{}:'.format(func.fb_struct_name()))
         src.add('    {')
-        src.add('      auto* fn = item.fn_as_{}();'.format(func.fb_struct_name()))
+        if func.params:
+            src.add('      auto* fn = item.fn_as_{}();'.format(func.fb_struct_name()))
         args = []
         placeholders = []
         for param in func.params:
             args.append('fn->{}()'.format(param.name))
             placeholders.append(param.ptype.printf)
-        src.add('      printf("{}({});\\n", {});'.format(
+        src.add('      printf("{}({});\\n"{}{});'.format(
             func.name,
             ', '.join(placeholders),
+            ', ' if func.params else '',
             ', '.join(args)))
         src.add('      break;')
         src.add('    }')
@@ -254,7 +249,8 @@ def main():
 
     path = os.path.join(args.build_dir, 'pumpkintown_schema.fbs')
     gen_schema_file().write(path)
-    subprocess.check_call(('flatc', '--cpp', path))
+    flatc_path = os.path.join(args.build_dir, 'flatbuffers', 'flatc')
+    subprocess.check_call((flatc_path, '--cpp', path))
 
     gen_dump_cc().write(os.path.join(args.build_dir, 'pumpkintown_dump_gen.cc'))
 
