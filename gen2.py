@@ -8,14 +8,12 @@ import subprocess
 
 import attr
 
-class GlTypes(enum.Enum):
-
-    @classmethod
-    def from_name(cls, name):
-        for _, member in cls.__members__.items():
-            if member.name == name:
-                return member
-        raise RuntimeError('missing type: ' + name)
+@attr.s
+class Type:
+    name = attr.ib()
+    ctype = attr.ib()
+    flatbuffer = attr.ib()
+    printf = attr.ib()
 
 
 class Source:
@@ -122,7 +120,7 @@ def load_glinfo(args):
             name = typ['name']
             flatbuffer = typ.get('flatbuffer')
             printf = typ.get('printf')
-            TYPES[name] = Type(name, ctype=typ['c'], flatbuffer, printf])
+            TYPES[name] = Type(name, typ['c'], flatbuffer, printf)
 
         for func in obj['functions']:
             params = []
@@ -243,7 +241,7 @@ def main():
     parser.add_argument('source_dir')
     args = parser.parse_args()
 
-    load_functions(args)
+    load_glinfo(args)
 
     gen_cc_file().write(os.path.join(args.build_dir, 'pumpkintown_gl_gen.cc'))
     gen_hh_file().write(os.path.join(args.build_dir, 'pumpkintown_gl_gen.hh'))

@@ -1,6 +1,6 @@
 {
   "types": [{
-    "name": "Bitfield"
+    "name": "Bitfield",
     "c": "GLbitfield",
     "flatbuffer": "uint32",
     "printf": "0x%x"
