@@ -1,9 +1,10 @@
+#include "pumpkintown_dump.hh"
+
 #include <stdexcept>
 #include <string>
 #include <vector>
 
-#include "pumpkintown_dump.hh"
-#include "pumpkintown_schema_generated.h"
+#include "pumpkintown_schema.capnp.h"
 
 void read_exact(FILE* f, uint8_t* buf, const uint64_t size) {
   uint64_t bytes_remaining = size;
@@ -35,6 +36,7 @@ int main(int argc, char** argv) {
   std::vector<uint8_t> vec;
   while (!feof(f)) {
     read_item(f, &vec);
+    capnp::PackedMessageReader message(f);
     auto trace_item = pumpkintown::GetTraceItem(vec.data());
     handle_trace_item(*trace_item);
   }

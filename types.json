@@ -1,72 +1,72 @@
 [
   {
     "c": "GLbitfield",
-    "flatbuffer": "uint32",
+    "capnp": "UInt32",
     "printf": "0x%x"
   },
   {
     "c": "GLboolean",
-    "flatbuffer": "bool",
+    "capnp": "Bool",
     "printf": "%d"
   },
   {
     "c": "GLbyte",
-    "flatbuffer": "int8",
+    "capnp": "Int8",
     "printf": "%d"
   },
   {
     "c": "GLclampf",
-    "flatbuffer": "float32",
+    "capnp": "Float32",
     "printf": "%f"
   },
   {
     "c": "GLdouble",
-    "flatbuffer": "float64",
+    "capnp": "Float64",
     "printf": "%f"
   },
   {
     "c": "GLenum",
-    "flatbuffer": "uint32",
+    "capnp": "UInt32",
     "printf": "0x%x"
   },
   {
     "c": "GLhandleARB",
-    "flatbuffer": "uint32",
+    "capnp": "UInt32",
     "printf": "%d"
   },
   {
     "c": "GLfixed",
-    "flatbuffer": "int32",
+    "capnp": "Int32",
     "printf": "%d"
   },
   {
     "c": "GLfloat",
-    "flatbuffer": "float32",
+    "capnp": "Float32",
     "printf": "%f"
   },
   {
     "c": "GLint",
-    "flatbuffer": "int32",
+    "capnp": "Int32",
     "printf": "%d"
   },
   {
     "c": "GLshort",
-    "flatbuffer": "int16",
+    "capnp": "Int16",
     "printf": "%d"
   },
   {
     "c": "GLsizei",
-    "flatbuffer": "int32",
+    "capnp": "Int32",
     "printf": "%d"
   },
   {
     "c": "GLuint",
-    "flatbuffer": "uint32",
+    "capnp": "UInt32",
     "printf": "%d"
   },
   {
     "c": "GLuint64",
-    "flatbuffer": "uint64",
+    "capnp": "UInt64",
     "printf": "%llu"
   },
   {

@@ -10,10 +10,25 @@ import attr
 
 import parse_xml
 
+
+def underscore_to_camel_case(string):
+    output = ''
+    cap_next = False
+    for char in string:
+        if char == '_':
+            cap_next = True
+        elif cap_next:
+            cap_next = False
+            output += char.upper()
+        else:
+            output += char
+    return output
+
+
 @attr.s
 class Type:
     ctype = attr.ib()
-    fbtype = attr.ib()
+    capnp = attr.ib()
     printf = attr.ib()
 
     @property
@@ -39,7 +54,7 @@ class Source:
         self.lines.append('#include {}'.format(string))
 
     def text(self):
-        return '\n'.join(self.lines)
+        return '\n'.join(self.lines) + '\n'
 
     def write(self, path):
         with open(path, 'w') as wfile:
@@ -54,8 +69,8 @@ class Param:
     def cxx(self):
         return '{} {}'.format(self.ptype.ctype, self.name)
 
-    def fbs_type(self):
-        return self.ptype.fbtype
+    def capnp_type(self):
+        return self.ptype.capnp
 
 
 @attr.s
@@ -86,9 +101,9 @@ class Function:
         if self.trace:
             lines.append('  flatbuffers::FlatBufferBuilder builder(1024);')
             lines.append('  auto item = CreateTraceItem(builder, Function_{}, '.format(
-                self.fb_struct_name()))
+                self.capnp_struct_name()))
             lines.append('      builder.CreateStruct({}({})).Union());'.format(
-                self.fb_struct_name(),
+                self.capnp_struct_name(),
                 ', '.join(param.name for param in self.params)))
             lines.append('  builder.Finish(item);')
             lines.append('  write_trace_item(builder.GetBufferPointer(), builder.GetSize());')
@@ -99,15 +114,24 @@ class Function:
         lines.append('}')
         return lines
 
-    def fb_struct_name(self):
-        return 'Fn{}{}'.format(self.name[0].upper(), self.name[1:])
+    def capnp_struct_name(self):
+        return 'Fn{}{}'.format(self.name[0].upper(), self.name[1:]).replace('_', '')
 
-    def fb_struct(self):
-        lines = ['struct {} {{'.format(self.fb_struct_name())]
+    def capnp_union_name(self):
+        name = self.capnp_struct_name()
+        return name[0].lower() + name[1:]
+
+    def is_serializable(self):
         for param in self.params:
-            lines.append('  {}: {};'.format(param.name, param.fbs_type()))
-        if not self.params:
-            lines.append('  dummy: bool;')
+            if param.capnp_type() is None:
+                return False
+        return True
+
+    def capnp_struct(self):
+        lines = ['struct {} {{'.format(self.capnp_struct_name())]
+        for index, param in enumerate(self.params):
+            lines.append('  {} @{} :{};'.format(underscore_to_camel_case(param.name),
+                                                index, param.capnp_type()))
         lines.append('}')
         return lines
 
@@ -124,9 +148,9 @@ def load_glinfo(args):
 
         for typ in root:
             ctype = typ['c']
-            fb = typ.get('flatbuffer')
+            capnp = typ.get('capnp')
             printf = typ.get('printf')
-            types[ctype] = Type(ctype, fb, printf)
+            types[ctype] = Type(ctype, capnp, printf)
 
         # for func in obj['functions']:
         #     params = []
@@ -188,7 +212,7 @@ def gen_cc_file():
     src = Source()
     src.add(['#include "pumpkintown_dlib.hh"',
              '#include "pumpkintown_gl_gen.hh"',
-             '#include "pumpkintown_schema_generated.h"',
+             '#include "pumpkintown_schema.capnp.h"',
              'using namespace pumpkintown;'])
     src.add(gen_body())
     return src
@@ -196,22 +220,24 @@ def gen_cc_file():
 
 def gen_schema_file():
     src = Source()
-    lines = ['namespace pumpkintown;',
-             'union Function {']
+    src.add('@0xdf015bce75b91ed3;')
+    src.add('using Cxx = import "/capnp/c++.capnp";')
+    src.add('$Cxx.namespace("pumpkintown");')
+    src.add('struct Function {')
+    src.add('  union {')
+    index = 0
     for func in FUNCTIONS:
-        if not func.trace:
+        if not func.is_serializable():
             continue
-        lines.append('  {},'.format(func.fb_struct_name()))
-    lines.append('}')
+        src.add('    {} @{} :{};'.format(func.capnp_union_name(), index,
+                                         func.capnp_struct_name()))
+        index += 1
+    src.add('  }')
+    src.add('}')
     for func in FUNCTIONS:
-        if not func.trace:
+        if not func.is_serializable():
             continue
-        lines += func.fb_struct()
-    lines += ['table TraceItem {',
-              '  fn: Function;',
-              '}']
-    src.add(lines)
-    src.add('root_type TraceItem;')
+        src.add(func.capnp_struct())
     return src
 
 
@@ -227,10 +253,10 @@ def gen_dump_cc():
     for func in FUNCTIONS:
         if not func.trace:
             continue
-        src.add('  case Function_{}:'.format(func.fb_struct_name()))
+        src.add('  case Function_{}:'.format(func.capnp_struct_name()))
         src.add('    {')
         if func.params:
-            src.add('      auto* fn = item.fn_as_{}();'.format(func.fb_struct_name()))
+            src.add('      auto* fn = item.fn_as_{}();'.format(func.capnp_struct_name()))
         args = []
         placeholders = []
         for param in func.params:
@@ -259,10 +285,9 @@ def main():
     gen_cc_file().write(os.path.join(args.build_dir, 'pumpkintown_gl_gen.cc'))
     gen_hh_file().write(os.path.join(args.build_dir, 'pumpkintown_gl_gen.hh'))
 
-    path = os.path.join(args.build_dir, 'pumpkintown_schema.fbs')
+    path = os.path.join(args.build_dir, 'pumpkintown_schema.capnp')
     gen_schema_file().write(path)
-    flatc_path = os.path.join(args.build_dir, 'flatbuffers', 'flatc')
-    subprocess.check_call((flatc_path, '--cpp', path))
+    subprocess.check_call(('capnp', 'compile', '-oc++', path))
 
     gen_dump_cc().write(os.path.join(args.build_dir, 'pumpkintown_dump_gen.cc'))
 
