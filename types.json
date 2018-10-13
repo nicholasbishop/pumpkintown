@@ -1,0 +1,87 @@
+[
+  {
+    "c": "GLbitfield",
+    "flatbuffer": "uint32",
+    "printf": "0x%x"
+  },
+  {
+    "c": "GLboolean",
+    "flatbuffer": "bool",
+    "printf": "%d"
+  },
+  {
+    "c": "GLbyte",
+    "flatbuffer": "int8",
+    "printf": "%d"
+  },
+  {
+    "c": "GLclampf",
+    "flatbuffer": "float32",
+    "printf": "%f"
+  },
+  {
+    "c": "GLdouble",
+    "flatbuffer": "float64",
+    "printf": "%f"
+  },
+  {
+    "c": "GLenum",
+    "flatbuffer": "uint32",
+    "printf": "0x%x"
+  },
+  {
+    "c": "GLhandleARB",
+    "flatbuffer": "uint32",
+    "printf": "%d"
+  },
+  {
+    "c": "GLfixed",
+    "flatbuffer": "int32",
+    "printf": "%d"
+  },
+  {
+    "c": "GLfloat",
+    "flatbuffer": "float32",
+    "printf": "%f"
+  },
+  {
+    "c": "GLint",
+    "flatbuffer": "int32",
+    "printf": "%d"
+  },
+  {
+    "c": "GLshort",
+    "flatbuffer": "int16",
+    "printf": "%d"
+  },
+  {
+    "c": "GLsizei",
+    "flatbuffer": "int32",
+    "printf": "%d"
+  },
+  {
+    "c": "GLuint",
+    "flatbuffer": "uint32",
+    "printf": "%d"
+  },
+  {
+    "c": "GLuint64",
+    "flatbuffer": "uint64",
+    "printf": "%llu"
+  },
+  {
+    "c": "void"
+  },
+  {
+    "c": "GLboolean *",
+    "printf": "%p"
+  },
+  {
+    "c": "const GLchar *",
+    "printf": "%p"
+  },
+  {
+    "c": "const GLuint *",
+    "printf": "%p"
+  }
+]

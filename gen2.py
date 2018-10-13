@@ -12,14 +12,13 @@ import parse_xml
 
 @attr.s
 class Type:
-    name = attr.ib()
     ctype = attr.ib()
     fbtype = attr.ib()
     printf = attr.ib()
 
     @property
     def is_void(self):
-        return self.name == 'Void'
+        return self.ctype == 'void'
 
 
 class Source:
@@ -114,21 +113,20 @@ class Function:
 
 
 FUNCTIONS = []
-TYPES = {}
 
 
 def load_glinfo(args):
     global FUNCTIONS
-    global TYPES
-    path = os.path.join(args.source_dir, 'glinfo.json')
+    types = {}
+    path = os.path.join(args.source_dir, 'types.json')
     with open(path) as rfile:
-        obj = json.load(rfile)
+        root = json.load(rfile)
 
-        for typ in obj['types']:
-            name = typ['name']
+        for typ in root:
+            ctype = typ['c']
             fb = typ.get('flatbuffer')
             printf = typ.get('printf')
-            TYPES[name] = Type(name, typ['c'], fb, printf)
+            types[ctype] = Type(ctype, fb, printf)
 
         # for func in obj['functions']:
         #     params = []
@@ -144,7 +142,14 @@ def load_glinfo(args):
     path = os.path.join(args.source_dir, 'OpenGL-Registry/xml/gl.xml')
     commands = parse_xml.parse_xml(path)
     for command in commands:
-        FUNCTIONS.append(Function(command.name, command.return_type, command.params))
+        try:
+            rtype = types[command.return_type]
+            params = []
+            for param in command.params:
+                params.append(Param(name=param.name, ptype=types[param.ptype]))
+            FUNCTIONS.append(Function(command.name, rtype, params))
+        except KeyError as err:
+            print(err)
 
 
 # (
