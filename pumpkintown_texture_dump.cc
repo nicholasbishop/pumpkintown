@@ -18,8 +18,7 @@ int main(int argc, char** argv) {
   }
 
   while (!deserialize.done()) {
-    FunctionId function_id{FunctionId::Invalid};
-    deserialize.read(&function_id);
+    FunctionId function_id{deserialize.read_function_id()};
     if (function_id != FunctionId::glTexImage2D) {
       continue;
     }

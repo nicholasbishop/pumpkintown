@@ -85,8 +85,10 @@ void Deserialize::read(double* value) {
   read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
 }
 
-void Deserialize::read(FunctionId* value) {
-  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+FunctionId Deserialize::read_function_id() {
+  FunctionId value{FunctionId::Invalid};
+  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(value));
+  return value;
 }
 
 }

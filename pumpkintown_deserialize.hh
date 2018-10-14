@@ -31,7 +31,7 @@ class Deserialize {
   void read(float* value);
   void read(double* value);
 
-  void read(FunctionId* value);
+  FunctionId read_function_id();
 
  private:
   FILE* file_{nullptr};
