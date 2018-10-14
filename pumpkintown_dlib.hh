@@ -12,6 +12,8 @@ class Serialize;
 
 Serialize* serialize();
 
+bool serialize_standard_gl_gen(int32_t count, uint32_t* array);
+
 }
 
 #endif  // PUMPKINTOWN_DLIB_H_

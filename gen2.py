@@ -102,6 +102,10 @@ class Function:
             'auto return_value = ' if self.has_return() else '',
             ', '.join(param.name for param in self.params)))
 
+        if self.name == 'glGenTextures':
+            lines.append('  pumpkintown::serialize_standard_gl_gen({});'.format(
+                ', '.join(param.name for param in self.params)))
+
         # Return the real function's result if it has one
         if self.has_return():
             lines.append('  return return_value;')
@@ -230,9 +234,9 @@ def gen_replay_cc():
     src.add_cxx_include('pumpkintown_deserialize.hh')
     src.add_cxx_include('pumpkintown_gl_types.hh')
     src.add('namespace pumpkintown {')
-    src.add('bool replay(Deserialize* deserialize, waffle_window* waffle_window) {')
+    src.add('bool Replay::replay() {')
     src.add('  FunctionId function_id{FunctionId::Invalid};')
-    src.add('  if (!deserialize->read(&function_id)) {')
+    src.add('  if (!deserialize_->read(&function_id)) {')
     src.add('    return false;')
     src.add('  }')
     src.add('  switch (function_id) {')
@@ -242,7 +246,11 @@ def gen_replay_cc():
         src.add('  case FunctionId::{}:'.format(func.name))
         if func.name == 'glXSwapBuffers':
             src.add('    printf("swap buffers\\n");')
-            src.add('    waffle_window_swap_buffers(waffle_window);')
+            src.add('    waffle_window_swap_buffers(waffle_window_);')
+            src.add('    break;')
+            continue
+        elif func.name == 'glGenTextures':
+            src.add('    gen_textures();')
             src.add('    break;')
             continue
         elif not func.is_serializable():
@@ -256,7 +264,7 @@ def gen_replay_cc():
         src.add('      static Fn fn = reinterpret_cast<Fn>(waffle_get_proc_address("{}"));'.format(func.name))
         for param in func.params:
             src.add('      {} {};'.format(param.ptype.stype, param.name))
-            src.add('      if (!deserialize->read(&{})) {{'.format(param.name))
+            src.add('      if (!deserialize_->read(&{})) {{'.format(param.name))
             src.add('        return false;')
             src.add('      }')
         src.add('      fn({});'.format(', '.join(param.name for param in func.params)))

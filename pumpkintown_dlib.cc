@@ -81,4 +81,16 @@ Serialize* serialize() {
   return &s;
 }
 
+bool serialize_standard_gl_gen(int32_t count, uint32_t* array) {
+  if (!serialize()->write(count)) {
+    return false;
+  }
+  for (int32_t i{0}; i < count; i++) {
+    if (!serialize()->write(array[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
 }
