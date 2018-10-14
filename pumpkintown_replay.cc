@@ -9,7 +9,7 @@
 #include <waffle.h>
 
 #include "pumpkintown_deserialize.hh"
-#include "pumpkintown_function_types.hh"
+#include "pumpkintown_gl_functions.hh"
 #include "pumpkintown_gl_types.hh"
 
 namespace pumpkintown {
@@ -26,11 +26,9 @@ void Replay::gen_textures() {
     deserialize_->read(&id);
     old_ids.emplace_back(id);
   }
-  static auto fn = reinterpret_cast<FnGlGenTextures>(
-      waffle_get_proc_address("glGenTextures"));
   std::vector<uint32_t> new_ids;
   new_ids.resize(count);
-  fn(count, new_ids.data());
+  glGenTextures(count, new_ids.data());
   for (int32_t i{0}; i < count; i++) {
     texture_ids_[old_ids[i]] = new_ids[i];
   }
@@ -42,10 +40,7 @@ void Replay::bind_texture() {
   uint32_t old_texture{0};
   deserialize_->read(&old_texture);
 
-  static auto fn = reinterpret_cast<FnGlBindTexture>(
-      waffle_get_proc_address("glBindTexture"));
-
-  fn(target, texture_ids_[old_texture]);
+  glBindTexture(target, texture_ids_[old_texture]);
 }
 
 void Replay::tex_image_2d() {

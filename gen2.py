@@ -227,16 +227,39 @@ def gen_function_id_header():
     return src
 
 
-def gen_function_types_header():
+def gen_gl_functions_header():
     src = Source()
     src.add_cxx_include('pumpkintown_gl_types.hh')
     src.add('namespace pumpkintown {')
     for func in FUNCTIONS:
-        src.add('  using Fn{}{} = {} (*)({});'.format(
-            func.name[0].upper(), func.name[1:],
+        src.add('{} {}({});'.format(
+            func.return_type.ctype,
+            func.name,
+            ', '.join(param.ptype.ctype for param in func.params)))
+    src.add('}')
+    src.add_guard('PUMPKINTOWN_GL_FUNCTIONS_HH_')
+    return src
+
+
+def gen_gl_functions_source():
+    src = Source()
+    src.add_cxx_include('pumpkintown_gl_functions.hh')
+    src.add_cxx_include('waffle-1/waffle.h', system=True)
+    src.add('namespace pumpkintown {')
+    for func in FUNCTIONS:
+        src.add('{} {}({}) {{'.format(
+            func.return_type.ctype,
+            func.name,
+            ', '.join(param.cxx() for param in func.params)))
+        src.add('  using Fn = {} (*)({});'.format(
             func.return_type.ctype,
             ', '.join(param.ptype.ctype for param in func.params)))
-    src.add_guard('PUMPKINTOWN_FUNCTION_TYPES_HH_')
+        src.add('  Fn fn = reinterpret_cast<Fn>(waffle_get_proc_address("{}"));'.format(
+            func.name))
+        src.add('  {}fn({});'.format(
+            'return ' if func.has_return() else '',
+            ', '.join(param.name for param in func.params)))
+        src.add('}')
     src.add('}')
     return src
 
@@ -346,7 +369,9 @@ def main():
     gen_hh_file().write(os.path.join(args.build_dir, 'pumpkintown_gl_gen.hh'))
 
     gen_function_id_header().write(os.path.join(args.build_dir, 'pumpkintown_function_id.hh'))
-    gen_function_types_header().write(os.path.join(args.build_dir, 'pumpkintown_function_types.hh'))
+
+    gen_gl_functions_header().write(os.path.join(args.build_dir, 'pumpkintown_gl_functions.hh'))
+    gen_gl_functions_source().write(os.path.join(args.build_dir, 'pumpkintown_gl_functions.cc'))
 
     gen_dump_cc().write(os.path.join(args.build_dir, 'pumpkintown_dump_gen.cc'))
     gen_replay_cc().write(os.path.join(args.build_dir, 'pumpkintown_replay_gen.cc'))

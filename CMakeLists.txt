@@ -32,6 +32,7 @@ include_directories(/usr/local/include/waffle-1)
 
 add_executable(pumpkintown_replay
   pumpkintown_deserialize.cc
+  pumpkintown_gl_functions.cc
   pumpkintown_replay.cc
   pumpkintown_replay_gen.cc)
 
