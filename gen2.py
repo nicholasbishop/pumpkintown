@@ -91,15 +91,20 @@ class Function:
         lines.append('  static Fn real_fn = reinterpret_cast<Fn>(get_real_proc_addr("{}"));'.format(self.name))
         lines.append('  pumpkintown::serialize()->write(pumpkintown::FunctionId::{});'.format(
             self.name))
+        #lines.append('  fprintf(stderr, "trace: {}\\n");'.format(self.name))
         if self.is_serializable():
             for param in self.params:
                 lines.append('  pumpkintown::serialize()->write(static_cast<{}>({}));'.format(
                     param.ptype.stype, param.name))
 
-        # Call the real function and return its value if it has one
+        # Call the real function
         lines.append('  {}real_fn({});'.format(
-            'return ' if self.has_return() else '',
+            'auto return_value = ' if self.has_return() else '',
             ', '.join(param.name for param in self.params)))
+
+        # Return the real function's result if it has one
+        if self.has_return():
+            lines.append('  return return_value;')
         lines.append('}')
         return lines
 
