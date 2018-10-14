@@ -15,12 +15,12 @@ int main() {
   struct waffle_context *ctx;
 
   const int32_t init_attrs[] = {
-    WAFFLE_PLATFORM, WAFFLE_PLATFORM_X11_EGL,
+    WAFFLE_PLATFORM, WAFFLE_PLATFORM_GLX,
     0,
   };
 
   const int32_t config_attrs[] = {
-    WAFFLE_CONTEXT_API,         WAFFLE_CONTEXT_OPENGL_ES2,
+    WAFFLE_CONTEXT_API,         WAFFLE_CONTEXT_OPENGL,
 
     WAFFLE_RED_SIZE,            8,
     WAFFLE_BLUE_SIZE,           8,
@@ -34,17 +34,6 @@ int main() {
 
   waffle_init(init_attrs);
   dpy = waffle_display_connect(NULL);
-
-  // Exit if OpenGL ES2 is unsupported.
-  if (!waffle_display_supports_context_api(dpy, WAFFLE_CONTEXT_OPENGL_ES2)
-      || !waffle_dl_can_open(WAFFLE_DL_OPENGL_ES2))
-  {
-    exit(EXIT_FAILURE);
-  }
-
-  // Get OpenGL functions.
-  //glClearColor = waffle_dl_sym(WAFFLE_DL_OPENGL_ES2, "glClearColor");
-  //glClear = waffle_dl_sym(WAFFLE_DL_OPENGL_ES2, "glClear");
 
   config = waffle_config_choose(dpy, config_attrs);
   window = waffle_window_create(config, window_width, window_height);

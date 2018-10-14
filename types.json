@@ -190,5 +190,14 @@
   },
   {
     "c": "GLvdpauSurfaceNV"
+  },
+  {
+    "c": "Font"
+  },
+  {
+    "c": "GLDEBUGPROCKHR"
+  },
+  {
+    "c": "GLeglImageOES"
   }
 ]

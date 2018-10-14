@@ -191,13 +191,16 @@ def gen_cc_file():
     src.add_cxx_include('pumpkintown_serialize.hh')
     for func in FUNCTIONS:
         src.add(func.cxx_body())
-    src.add('extern "C" void* glXGetProcAddressARB(const char* name) {')
+    src.add('extern "C" void* glXGetProcAddress(const char* name) {')
     for func in FUNCTIONS:
         src.add('  if (strcmp(name, "{}") == 0) {{'.format(func.name))
         src.add('    return reinterpret_cast<void*>(&{});'.format(func.name))
         src.add('  }')
     src.add('  fprintf(stderr, "unknown function: %s\\n", name);')
     src.add('  return nullptr;')
+    src.add('}')
+    src.add('extern "C" void* glXGetProcAddressARB(const char* name) {')
+    src.add('  return glXGetProcAddress(name);')
     src.add('}')
     return src
 
@@ -233,6 +236,7 @@ def gen_replay_cc():
     for func in FUNCTIONS:
         src.add('  case FunctionId::{}:'.format(func.name))
         if func.name == 'glXSwapBuffers':
+            src.add('    printf("swap buffers\\n");')
             src.add('    waffle_window_swap_buffers(waffle_window);')
             src.add('    break;')
             continue
@@ -241,6 +245,7 @@ def gen_replay_cc():
             src.add('    break;')
             continue
         src.add('    {')
+        src.add('      printf("call: {}\\n");'.format(func.name))
         src.add('      ' + func.cxx_function_type_alias())
         # Static function pointer to the "real" call
         src.add('      static Fn fn = reinterpret_cast<Fn>(waffle_get_proc_address("{}"));'.format(func.name))

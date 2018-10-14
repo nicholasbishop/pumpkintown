@@ -53,5 +53,8 @@ using Window = void*;
 using GLXFBConfigSGIX = void*;
 using GLXPbufferSGIX = void*;
 using GLvdpauSurfaceNV = void*;
+using Font = void*;
+using GLDEBUGPROCKHR = void*;
+using GLeglImageOES = void*;
 
 #endif  // PUMPKINTOWN_GL_TYPES_HH_
