@@ -16,6 +16,8 @@ class Deserialize {
 
   bool done();
 
+  void read(uint8_t* value, uint64_t size);
+
   void read(int8_t* value);
   void read(int16_t* value);
   void read(int32_t* value);

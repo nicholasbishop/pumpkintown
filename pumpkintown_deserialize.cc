@@ -41,6 +41,10 @@ bool Deserialize::done() {
 
 // TODO(nicholasbishop): byte ordering
 
+void Deserialize::read(uint8_t* value, uint64_t size) {
+  read_exact(file_, value, size);
+}
+
 void Deserialize::read(int8_t* value) {
   read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
 }

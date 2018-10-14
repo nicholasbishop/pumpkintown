@@ -105,6 +105,9 @@ class Function:
         if self.name == 'glGenTextures':
             lines.append('  pumpkintown::serialize_standard_gl_gen({});'.format(
                 ', '.join(param.name for param in self.params)))
+        elif self.name == 'glTexImage2D':
+            lines.append('  pumpkintown::serialize_tex_image_2d({});'.format(
+                ', '.join(param.name for param in self.params)))
 
         # Return the real function's result if it has one
         if self.has_return():
@@ -251,9 +254,7 @@ def gen_gl_functions_source():
             func.return_type.ctype,
             func.name,
             ', '.join(param.cxx() for param in func.params)))
-        src.add('  using Fn = {} (*)({});'.format(
-            func.return_type.ctype,
-            ', '.join(param.ptype.ctype for param in func.params)))
+        src.add(func.cxx_function_type_alias())
         src.add('  Fn fn = reinterpret_cast<Fn>(waffle_get_proc_address("{}"));'.format(
             func.name))
         src.add('  {}fn({});'.format(
@@ -269,6 +270,7 @@ def gen_replay_cc():
     src.add_cxx_include('pumpkintown_replay.hh')
     src.add_cxx_include('waffle-1/waffle.h', system=True)
     src.add_cxx_include('pumpkintown_deserialize.hh')
+    src.add_cxx_include('pumpkintown_gl_functions.hh')
     src.add_cxx_include('pumpkintown_gl_types.hh')
     src.add('namespace pumpkintown {')
     src.add('bool Replay::replay() {')
@@ -301,13 +303,10 @@ def gen_replay_cc():
             src.add('    break;')
             continue
         src.add('    {')
-        src.add('      ' + func.cxx_function_type_alias())
-        # Static function pointer to the "real" call
-        src.add('      static Fn fn = reinterpret_cast<Fn>(waffle_get_proc_address("{}"));'.format(func.name))
         for param in func.params:
             src.add('      {} {};'.format(param.ptype.stype, param.name))
             src.add('      deserialize_->read(&{});'.format(param.name))
-        src.add('      fn({});'.format(', '.join(param.name for param in func.params)))
+        src.add('      {}({});'.format(func.name, ', '.join(param.name for param in func.params)))
         src.add('      break;')
         src.add('    }')
     src.add('  }')

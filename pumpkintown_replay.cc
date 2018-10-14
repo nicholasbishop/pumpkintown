@@ -44,6 +44,40 @@ void Replay::bind_texture() {
 }
 
 void Replay::tex_image_2d() {
+  uint32_t target{0};
+  deserialize_->read(&target);
+  int32_t level{0};
+  deserialize_->read(&level);
+  int32_t internalformat{0};
+  deserialize_->read(&internalformat);
+  int32_t width{0};
+  deserialize_->read(&width);
+  int32_t height{0};
+  deserialize_->read(&height);
+  int32_t border{0};
+  deserialize_->read(&border);
+  uint32_t format{0};
+  deserialize_->read(&format);
+  uint32_t type{0};
+  deserialize_->read(&type);
+
+  uint64_t num_bytes{0};
+  deserialize_->read(&num_bytes);
+
+  std::vector<uint8_t> data;
+  data.resize(num_bytes);
+
+  deserialize_->read(data.data(), num_bytes);
+
+  glTexImage2D(target,
+               level,
+               internalformat,
+               width,
+               height,
+               border,
+               format,
+               type,
+               data.data());
 }
 
 }
@@ -74,8 +108,8 @@ int main() {
     0,
   };
 
-  const int32_t window_width = 320;
-  const int32_t window_height = 240;
+  const int32_t window_width = 800;
+  const int32_t window_height = 600;
 
   waffle_init(init_attrs);
   dpy = waffle_display_connect(NULL);

@@ -93,4 +93,16 @@ bool serialize_standard_gl_gen(int32_t count, uint32_t* array) {
   return true;
 }
 
+void serialize_tex_image_2d(GLenum target,
+                            GLint level,
+                            GLint internalformat,
+                            GLsizei width,
+                            GLsizei height,
+                            GLint border,
+                            GLenum format,
+                            GLenum type,
+                            const GLvoid * data) {
+  serialize()->write(target);
+}
+
 }

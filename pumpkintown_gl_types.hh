@@ -56,5 +56,6 @@ using GLvdpauSurfaceNV = void*;
 using Font = void*;
 using GLDEBUGPROCKHR = void*;
 using GLeglImageOES = void*;
+using GLvoid = void;
 
 #endif  // PUMPKINTOWN_GL_TYPES_HH_
