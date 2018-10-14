@@ -26,6 +26,11 @@ int main() {
     WAFFLE_BLUE_SIZE,           8,
     WAFFLE_GREEN_SIZE,          8,
 
+    WAFFLE_DEPTH_SIZE, 8,
+
+         
+    WAFFLE_DOUBLE_BUFFERED, false,
+
     0,
   };
 
