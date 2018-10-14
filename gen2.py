@@ -51,10 +51,17 @@ class Source:
             wfile.write(self.text())
 
 
+class Direction(enum.Enum):
+    Invalid = 0
+    Input = 1
+    Output = 2
+
+
 @attr.s
 class Param:
     ptype = attr.ib()
     name = attr.ib()
+    direction = attr.ib(default=Direction.Invalid)
 
     def cxx(self):
         return '{} {}'.format(self.ptype.ctype, self.name)
@@ -62,12 +69,21 @@ class Param:
     def serialize_type(self):
         return self.ptype.stype
 
+    def is_serializable(self):
+        return self.ptype.stype or self.direction != Direction.Invalid
+
 
 @attr.s
 class Function:
     name = attr.ib()
     return_type = attr.ib()
     params = attr.ib()
+
+    def param(self, name):
+        for param in self.params:
+            if param.name == name:
+                return param
+        raise KeyError('parameter not found: ' + name)
 
     def has_return(self):
         return not self.return_type.is_void
@@ -84,6 +100,9 @@ class Function:
             self.return_type.ctype,
             ', '.join(param.ptype.ctype for param in self.params))
 
+    def cxx_call_args(self):
+        return ', '.join(param.name for param in self.params)
+
     def cxx_body(self):
         lines = ['{} {{'.format(self.cxx_decl())]
         lines.append('  ' + self.cxx_function_type_alias())
@@ -94,8 +113,16 @@ class Function:
         #lines.append('  fprintf(stderr, "trace: {}\\n");'.format(self.name))
         if self.is_serializable():
             for param in self.params:
-                lines.append('  pumpkintown::serialize()->write(static_cast<{}>({}));'.format(
-                    param.ptype.stype, param.name))
+                if param.direction == Direction.Input:
+                    lines.append('  const uint64_t {}_num_bytes = pumpkintown::{}_{}_num_bytes({});'.format(
+                        param.name, self.name, param.name, self.cxx_call_args()))
+                    lines.append('  pumpkintown::serialize()->write({}_num_bytes);'.format(
+                        param.name))
+                    lines.append('  pumpkintown::serialize()->write(reinterpret_cast<const uint8_t*>({}), {}_num_bytes);'.format(
+                        param.name, param.name))
+                else:
+                    lines.append('  pumpkintown::serialize()->write(static_cast<{}>({}));'.format(
+                        param.ptype.stype, param.name))
 
         # Call the real function
         lines.append('  {}real_fn({});'.format(
@@ -104,9 +131,6 @@ class Function:
 
         if self.name == 'glGenTextures':
             lines.append('  pumpkintown::serialize_standard_gl_gen({});'.format(
-                ', '.join(param.name for param in self.params)))
-        elif self.name == 'glTexImage2D':
-            lines.append('  pumpkintown::serialize_tex_image_2d({});'.format(
                 ', '.join(param.name for param in self.params)))
 
         # Return the real function's result if it has one
@@ -124,7 +148,7 @@ class Function:
 
     def is_serializable(self):
         for param in self.params:
-            if param.serialize_type() is None:
+            if not param.is_serializable():
                 return False
         return True
 
@@ -138,10 +162,12 @@ class Function:
 
 
 FUNCTIONS = []
+ENUMS = []
 
 
 def load_glinfo(args):
     global FUNCTIONS
+    global ENUMS
     types = {}
     path = os.path.join(args.source_dir, 'types.json')
     with open(path) as rfile:
@@ -158,15 +184,16 @@ def load_glinfo(args):
             const_ptr_ctype = 'const ' + ptr_ctype
             const_ptr_ptr_ctype = 'const ' + ptr_ctype + '*'
             types[const_ctype] = Type(const_ctype)
-            types[ptr_ctype] = Type(ptr_ctype)
-            types[const_ptr_ctype] = Type(const_ptr_ctype)
-            types[const_ptr_ptr_ctype] = Type(const_ptr_ptr_ctype)
+            types[ptr_ctype] = Type(ptr_ctype, printf='%p')
+            types[const_ptr_ctype] = Type(const_ptr_ctype, printf='%p')
+            types[const_ptr_ptr_ctype] = Type(const_ptr_ptr_ctype, printf='%p')
 
     path1 = os.path.join(args.source_dir, 'OpenGL-Registry/xml/gl.xml')
     path2 = os.path.join(args.source_dir, 'OpenGL-Registry/xml/glx.xml')
-    commands = parse_xml.parse_xml(path1)
-    commands += parse_xml.parse_xml(path2)
-    for command in commands:
+    registry = parse_xml.Registry()
+    parse_xml.parse_xml(registry, path1)
+    parse_xml.parse_xml(registry, path2)
+    for command in registry.commands:
         try:
             rtype = types[command.return_type]
             params = []
@@ -175,6 +202,21 @@ def load_glinfo(args):
             FUNCTIONS.append(Function(command.name, rtype, params))
         except KeyError as err:
             print(err)
+
+    ENUMS = registry.enums
+
+    path = os.path.join(args.source_dir, 'overrides.json')
+    with open(path) as rfile:
+        root = json.load(rfile)
+
+        for key, val in root.items():
+            for func in FUNCTIONS:
+                if func.name == key:
+                    for param_name, overrides in val.get('params', {}).items():
+                        param = func.param(param_name)
+                        if overrides.get('direction') == 'input':
+                            param.direction = Direction.Input
+                    break
 
 
 def gen_exports():
@@ -214,6 +256,16 @@ def gen_cc_file():
     src.add('extern "C" void* glXGetProcAddressARB(const char* name) {')
     src.add('  return glXGetProcAddress(name);')
     src.add('}')
+    return src
+
+
+def gen_gl_enum_header():
+    src = Source()
+    src.add('enum FunctionId {')
+    for name, value in ENUMS.items():
+        src.add('  {} = {},'.format(name, value))
+    src.add('};')
+    src.add_guard('PUMPKINTOWN_FUNCTION_ID_HH_')
     return src
 
 
@@ -268,6 +320,7 @@ def gen_gl_functions_source():
 def gen_replay_cc():
     src = Source()
     src.add_cxx_include('pumpkintown_replay.hh')
+    src.add_cxx_include('vector', system=True)
     src.add_cxx_include('waffle-1/waffle.h', system=True)
     src.add_cxx_include('pumpkintown_deserialize.hh')
     src.add_cxx_include('pumpkintown_gl_functions.hh')
@@ -294,19 +347,27 @@ def gen_replay_cc():
             src.add('    bind_texture();')
             src.add('    break;')
             continue
-        elif func.name == 'glTexImage2D':
-            src.add('    tex_image_2d();')
-            src.add('    break;')
-            continue
         elif not func.is_serializable():
             src.add('    printf("stub\\n");')
             src.add('    break;')
             continue
         src.add('    {')
+        args = []
         for param in func.params:
-            src.add('      {} {};'.format(param.ptype.stype, param.name))
-            src.add('      deserialize_->read(&{});'.format(param.name))
-        src.add('      {}({});'.format(func.name, ', '.join(param.name for param in func.params)))
+            if param.direction == Direction.Input:
+                src.add('      std::vector<uint8_t> {};'.format(param.name))
+                src.add('      uint64_t {}_num_bytes = 0;'.format(param.name))
+                src.add('      deserialize_->read(&{}_num_bytes);'.format(param.name))
+                src.add('      {}.resize({}_num_bytes);'.format(
+                    param.name, param.name))
+                src.add('      deserialize_->read({}.data(), {}_num_bytes);'.format(
+                    param.name, param.name))
+                args.append('{}.data()'.format(param.name))
+            else:
+                src.add('      {} {};'.format(param.ptype.stype, param.name))
+                args.append(param.name)
+                src.add('      deserialize_->read(&{});'.format(param.name))
+        src.add('      {}({});'.format(func.name, ', '.join(args)))
         src.add('      break;')
         src.add('    }')
     src.add('  }')
@@ -369,10 +430,11 @@ def main():
 
     gen_function_id_header().write(os.path.join(args.build_dir, 'pumpkintown_function_id.hh'))
 
+    gen_gl_enum_header().write(os.path.join(args.build_dir, 'pumpkintown_gl_enum.hh'))
     gen_gl_functions_header().write(os.path.join(args.build_dir, 'pumpkintown_gl_functions.hh'))
     gen_gl_functions_source().write(os.path.join(args.build_dir, 'pumpkintown_gl_functions.cc'))
 
-    gen_dump_cc().write(os.path.join(args.build_dir, 'pumpkintown_dump_gen.cc'))
+    #gen_dump_cc().write(os.path.join(args.build_dir, 'pumpkintown_dump_gen.cc'))
     gen_replay_cc().write(os.path.join(args.build_dir, 'pumpkintown_replay_gen.cc'))
 
 

@@ -6,6 +6,7 @@
 
 #include <dlfcn.h>
 
+#include "pumpkintown_gl_enum.hh"
 #include "pumpkintown_gl_types.hh"
 #include "pumpkintown_serialize.hh"
 
@@ -93,16 +94,45 @@ bool serialize_standard_gl_gen(int32_t count, uint32_t* array) {
   return true;
 }
 
-void serialize_tex_image_2d(GLenum target,
-                            GLint level,
-                            GLint internalformat,
-                            GLsizei width,
-                            GLsizei height,
-                            GLint border,
-                            GLenum format,
-                            GLenum type,
-                            const GLvoid * data) {
-  serialize()->write(target);
+uint64_t gl_texture_format_num_components(const GLenum type) {
+  switch (type) {
+    case GL_RED:
+      return 1;
+    case GL_RGB:
+      return 3;
+    case GL_RGBA:
+      return 4;
+  }
+  fprintf(stderr, "unknown texture format: 0x%x\n", type);
+  throw std::runtime_error("unknown texture format");
+}
+
+uint64_t gl_texture_type_num_bytes(const GLenum format) {
+  switch (format) {
+    case GL_UNSIGNED_BYTE:
+      return 1;
+    case GL_FLOAT:
+      return 4;
+  }
+  fprintf(stderr, "unknown texture type: 0x%x\n", format);
+  throw std::runtime_error("unknown texture type");
+}
+
+uint64_t glTexImage2D_pixels_num_bytes(GLenum target,
+                                       GLint level,
+                                       GLint internalformat,
+                                       GLsizei width,
+                                       GLsizei height,
+                                       GLint border,
+                                       GLenum format,
+                                       GLenum type,
+                                       const void *pixels) {
+  if (!pixels) {
+    return 0;
+  }
+  return (gl_texture_type_num_bytes(type) *
+          gl_texture_format_num_components(format) *
+          width * height);
 }
 
 }

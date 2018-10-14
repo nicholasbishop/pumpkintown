@@ -45,14 +45,24 @@ class Command:
         return Command(name, rtype, params)
 
 
-def parse_xml(name):
+class Registry:
+    def __init__(self):
+        self.commands = []
+        self.enums = {}
+
+
+def parse_xml(registry, name):
     tree = ElementTree.parse(name)
     root = tree.getroot()
 
-    commands = []
     for node in root.iter('command'):
         command = Command.from_xml(node)
         if command:
-            commands.append(command)
+            registry.commands.append(command)
 
-    return commands
+    enums = []
+    for node in root.iter('enum'):
+        value = node.get('value')
+        name = node.get('name')
+        if name and value and '"' not in value:
+            registry.enums[name] = value

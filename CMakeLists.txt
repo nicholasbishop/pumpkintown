@@ -14,7 +14,7 @@ add_custom_command(
   pumpkintown_gl_gen.hh
   pumpkintown_replay_gen.cc
   COMMAND ${PROJECT_SOURCE_DIR}/gen2.py ${CMAKE_CURRENT_BINARY_DIR} ${PROJECT_SOURCE_DIR}
-  DEPENDS gen2.py types.json)
+  DEPENDS gen2.py parse_xml.py types.json overrides.json)
 
 add_library(pumpkintown
   SHARED
@@ -22,13 +22,17 @@ add_library(pumpkintown
   pumpkintown_gl_gen.cc
   pumpkintown_serialize.cc)
 
-add_executable(pumpkintown_dump
-  pumpkintown_deserialize.cc
-  pumpkintown_dump.cc
-  pumpkintown_dump_gen.cc)
+# add_executable(pumpkintown_dump
+#   pumpkintown_deserialize.cc
+#   pumpkintown_dump.cc
+#   pumpkintown_dump_gen.cc)
 
 # TODO
 include_directories(/usr/local/include/waffle-1)
+
+add_executable(pumpkintown_texture_dump
+  pumpkintown_deserialize.cc
+  pumpkintown_texture_dump.cc)
 
 add_executable(pumpkintown_replay
   pumpkintown_deserialize.cc

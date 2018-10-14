@@ -19,8 +19,6 @@ class Replay {
 
   void bind_texture();
 
-  void tex_image_2d();
-
  private:
   Deserialize* deserialize_;
   waffle_window* waffle_window_;

@@ -16,6 +16,8 @@ class Serialize {
 
   bool is_open();
 
+  bool write(const uint8_t* value, uint64_t num_bytes);
+
   bool write(int8_t value);
   bool write(int16_t value);
   bool write(int32_t value);

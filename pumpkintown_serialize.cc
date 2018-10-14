@@ -37,6 +37,10 @@ bool Serialize::is_open() {
   return file_ != nullptr;
 }
 
+bool Serialize::write(const uint8_t* value, uint64_t num_bytes) {
+  return write_all(file_, value, num_bytes);
+}
+
 bool Serialize::write(const int8_t value) {
   return write_all(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
@@ -58,6 +62,10 @@ bool Serialize::write(const uint16_t value) {
 }
 
 bool Serialize::write(const uint32_t value) {
+  return write_all(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
+}
+
+bool Serialize::write(const uint64_t value) {
   return write_all(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
 

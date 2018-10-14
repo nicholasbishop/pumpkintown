@@ -1,0 +1,9 @@
+{
+  "glTexImage2D": {
+    "params": {
+      "pixels": {
+        "direction": "input"
+      }
+    }
+  }
+}

@@ -16,7 +16,7 @@ Serialize* serialize();
 
 bool serialize_standard_gl_gen(int32_t count, uint32_t* array);
 
-void serialize_tex_image_2d(GLenum target,
+uint64_t glTexImage2D_pixels_num_bytes(GLenum target,
   	GLint level,
   	GLint internalformat,
   	GLsizei width,
@@ -24,7 +24,7 @@ void serialize_tex_image_2d(GLenum target,
   	GLint border,
   	GLenum format,
   	GLenum type,
-  	const GLvoid * data);
+  	const void *pixels);
 
 }
 
