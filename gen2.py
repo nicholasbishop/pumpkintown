@@ -223,7 +223,21 @@ def gen_function_id_header():
         src.add('  {},'.format(func.name))
     src.add('};')
     src.add('}')
-    src.add_guard('PUMPKINTOWN_FUNCTION_ID_H_')
+    src.add_guard('PUMPKINTOWN_FUNCTION_ID_HH_')
+    return src
+
+
+def gen_function_types_header():
+    src = Source()
+    src.add_cxx_include('pumpkintown_gl_types.hh')
+    src.add('namespace pumpkintown {')
+    for func in FUNCTIONS:
+        src.add('  using Fn{}{} = {} (*)({});'.format(
+            func.name[0].upper(), func.name[1:],
+            func.return_type.ctype,
+            ', '.join(param.ptype.ctype for param in func.params)))
+    src.add_guard('PUMPKINTOWN_FUNCTION_TYPES_HH_')
+    src.add('}')
     return src
 
 
@@ -236,16 +250,14 @@ def gen_replay_cc():
     src.add('namespace pumpkintown {')
     src.add('bool Replay::replay() {')
     src.add('  FunctionId function_id{FunctionId::Invalid};')
-    src.add('  if (!deserialize_->read(&function_id)) {')
-    src.add('    return false;')
-    src.add('  }')
+    src.add('  deserialize_->read(&function_id);')
     src.add('  switch (function_id) {')
     src.add('  case FunctionId::Invalid:')
     src.add('    break;')
     for func in FUNCTIONS:
         src.add('  case FunctionId::{}:'.format(func.name))
+        src.add('    printf("{}\\n");'.format(func.name))
         if func.name == 'glXSwapBuffers':
-            src.add('    printf("swap buffers\\n");')
             src.add('    waffle_window_swap_buffers(waffle_window_);')
             src.add('    break;')
             continue
@@ -253,20 +265,25 @@ def gen_replay_cc():
             src.add('    gen_textures();')
             src.add('    break;')
             continue
+        elif func.name == 'glBindTexture':
+            src.add('    bind_texture();')
+            src.add('    break;')
+            continue
+        elif func.name == 'glTexImage2D':
+            src.add('    tex_image_2d();')
+            src.add('    break;')
+            continue
         elif not func.is_serializable():
-            src.add('    printf("stub: {}\\n");'.format(func.name))
+            src.add('    printf("stub\\n");')
             src.add('    break;')
             continue
         src.add('    {')
-        src.add('      printf("call: {}\\n");'.format(func.name))
         src.add('      ' + func.cxx_function_type_alias())
         # Static function pointer to the "real" call
         src.add('      static Fn fn = reinterpret_cast<Fn>(waffle_get_proc_address("{}"));'.format(func.name))
         for param in func.params:
             src.add('      {} {};'.format(param.ptype.stype, param.name))
-            src.add('      if (!deserialize_->read(&{})) {{'.format(param.name))
-            src.add('        return false;')
-            src.add('      }')
+            src.add('      deserialize_->read(&{});'.format(param.name))
         src.add('      fn({});'.format(', '.join(param.name for param in func.params)))
         src.add('      break;')
         src.add('    }')
@@ -286,9 +303,7 @@ def gen_dump_cc():
     src.add('namespace pumpkintown {')
     src.add('bool handle_trace_item(Deserialize* deserialize) {')
     src.add('  FunctionId function_id{FunctionId::Invalid};')
-    src.add('  if (!deserialize->read(&function_id)) {')
-    src.add('    return false;')
-    src.add('  }')
+    src.add('  deserialize->read(&function_id);')
     src.add('  switch (function_id) {')
     src.add('  case FunctionId::Invalid:')
     src.add('    break;')
@@ -302,9 +317,7 @@ def gen_dump_cc():
         placeholders = []
         for param in func.params:
             src.add('      {} {};'.format(param.serialize_type(), param.name))
-            src.add('      if (!deserialize->read(&{})) {{'.format(param.name))
-            src.add('        return false;')
-            src.add('      }')
+            src.add('      deserialize->read(&{});'.format(param.name))
             args.append(param.name)
             placeholders.append(param.ptype.printf)
         src.add('      printf("{}({});\\n"{}{});'.format(
@@ -333,6 +346,7 @@ def main():
     gen_hh_file().write(os.path.join(args.build_dir, 'pumpkintown_gl_gen.hh'))
 
     gen_function_id_header().write(os.path.join(args.build_dir, 'pumpkintown_function_id.hh'))
+    gen_function_types_header().write(os.path.join(args.build_dir, 'pumpkintown_function_types.hh'))
 
     gen_dump_cc().write(os.path.join(args.build_dir, 'pumpkintown_dump_gen.cc'))
     gen_replay_cc().write(os.path.join(args.build_dir, 'pumpkintown_replay_gen.cc'))

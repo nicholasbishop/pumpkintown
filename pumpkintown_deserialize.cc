@@ -1,22 +1,22 @@
 #include "pumpkintown_deserialize.hh"
 
 #include <cstdio>
+#include <stdexcept>
 
 namespace pumpkintown {
 
 namespace {
 
-bool read_exact(FILE* f, uint8_t* buf, uint64_t num_bytes) {
+void read_exact(FILE* f, uint8_t* buf, uint64_t num_bytes) {
   uint64_t bytes_remaining = num_bytes;
   while (bytes_remaining > 0) {
     uint64_t bytes_read = fread(buf, 1, bytes_remaining, f);
     if (bytes_read == 0) {
-      return false;
+      throw std::runtime_error("read failed");
     }
     bytes_remaining -= bytes_read;
     buf += bytes_read;
   }
-  return true;
 }
 
 }
@@ -41,48 +41,48 @@ bool Deserialize::done() {
 
 // TODO(nicholasbishop): byte ordering
 
-bool Deserialize::read(int8_t* value) {
-  return read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+void Deserialize::read(int8_t* value) {
+  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
 }
 
-bool Deserialize::read(int16_t* value) {
-  return read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+void Deserialize::read(int16_t* value) {
+  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
 }
 
-bool Deserialize::read(int32_t* value) {
-  return read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+void Deserialize::read(int32_t* value) {
+  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
 }
 
-bool Deserialize::read(int64_t* value) {
-  return read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+void Deserialize::read(int64_t* value) {
+  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
 }
 
-bool Deserialize::read(uint8_t* value) {
-  return read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+void Deserialize::read(uint8_t* value) {
+  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
 }
 
-bool Deserialize::read(uint16_t* value) {
-  return read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+void Deserialize::read(uint16_t* value) {
+  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
 }
 
-bool Deserialize::read(uint32_t* value) {
-  return read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+void Deserialize::read(uint32_t* value) {
+  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
 }
 
-bool Deserialize::read(uint64_t* value) {
-  return read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+void Deserialize::read(uint64_t* value) {
+  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
 }
 
-bool Deserialize::read(float* value) {
-  return read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+void Deserialize::read(float* value) {
+  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
 }
 
-bool Deserialize::read(double* value) {
-  return read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+void Deserialize::read(double* value) {
+  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
 }
 
-bool Deserialize::read(FunctionId* value) {
-  return read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+void Deserialize::read(FunctionId* value) {
+  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
 }
 
 }

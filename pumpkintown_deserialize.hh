@@ -16,20 +16,20 @@ class Deserialize {
 
   bool done();
 
-  bool read(int8_t* value);
-  bool read(int16_t* value);
-  bool read(int32_t* value);
-  bool read(int64_t* value);
+  void read(int8_t* value);
+  void read(int16_t* value);
+  void read(int32_t* value);
+  void read(int64_t* value);
 
-  bool read(uint8_t* value);
-  bool read(uint16_t* value);
-  bool read(uint32_t* value);
-  bool read(uint64_t* value);
+  void read(uint8_t* value);
+  void read(uint16_t* value);
+  void read(uint32_t* value);
+  void read(uint64_t* value);
 
-  bool read(float* value);
-  bool read(double* value);
+  void read(float* value);
+  void read(double* value);
 
-  bool read(FunctionId* value);
+  void read(FunctionId* value);
 
  private:
   FILE* file_{nullptr};

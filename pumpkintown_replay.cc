@@ -9,34 +9,46 @@
 #include <waffle.h>
 
 #include "pumpkintown_deserialize.hh"
+#include "pumpkintown_function_types.hh"
+#include "pumpkintown_gl_types.hh"
 
 namespace pumpkintown {
 
 Replay::Replay(Deserialize* deserialize, waffle_window* waffle_window)
     : deserialize_(deserialize), waffle_window_(waffle_window) {}
 
-bool Replay::gen_textures() {
+void Replay::gen_textures() {
   int32_t count{0};
-  if (!deserialize_->read(&count)) {
-    return false;
-  }
+  deserialize_->read(&count);
   std::vector<uint32_t> old_ids;
   for (int32_t i{0}; i < count; i++) {
     uint32_t id{0};
-    if (!deserialize_->read(&id)) {
-      return false;
-    }
+    deserialize_->read(&id);
     old_ids.emplace_back(id);
   }
-  using Fn = void (*)(int32_t, uint32_t*);
-  static Fn fn = reinterpret_cast<Fn>(waffle_get_proc_address("glGenTextures"));
+  static auto fn = reinterpret_cast<FnGlGenTextures>(
+      waffle_get_proc_address("glGenTextures"));
   std::vector<uint32_t> new_ids;
   new_ids.resize(count);
   fn(count, new_ids.data());
   for (int32_t i{0}; i < count; i++) {
     texture_ids_[old_ids[i]] = new_ids[i];
   }
-  return true;
+}
+
+void Replay::bind_texture() {
+  uint32_t target{0};
+  deserialize_->read(&target);
+  uint32_t old_texture{0};
+  deserialize_->read(&old_texture);
+
+  static auto fn = reinterpret_cast<FnGlBindTexture>(
+      waffle_get_proc_address("glBindTexture"));
+
+  fn(target, texture_ids_[old_texture]);
+}
+
+void Replay::tex_image_2d() {
 }
 
 }

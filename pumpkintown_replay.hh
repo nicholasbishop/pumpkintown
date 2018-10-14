@@ -15,7 +15,11 @@ class Replay {
 
   bool replay();
 
-  bool gen_textures();
+  void gen_textures();
+
+  void bind_texture();
+
+  void tex_image_2d();
 
  private:
   Deserialize* deserialize_;
