@@ -4,3 +4,5 @@ pumpkintown_commands.c
 pumpkintown_glx_commands.c
 pumpkintown_types.c
 pumpkintown_types.h
+
+__pycache__

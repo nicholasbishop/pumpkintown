@@ -1,5 +1,9 @@
 ## Dependencies
 
+### Waffle
+
+https://github.com/waffle-gl/waffle.git
+
 ## Building
 
     git submodule update --init

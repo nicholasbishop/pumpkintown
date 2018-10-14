@@ -20,6 +20,9 @@
     "printf": "%d"
   },
   {
+    "c": "GLchar"
+  },
+  {
     "c": "GLclampf",
     "serialize": "float",
     "printf": "%f"
@@ -78,34 +81,34 @@
     "c": "int"
   },
   {
-    "c": "int *"
+    "c": "GLXFBConfig"
   },
   {
-    "c": "const GLfloat *"
+    "c": "void **"
   },
   {
-    "c": "const GLubyte *"
-  },
-  {
-    "c": "const char *"
-  },
-  {
-    "c": "unsigned int *"
+    "c": "GLubyte"
   },
   {
     "c": "void"
   },
   {
-    "c": "GLboolean *",
-    "printf": "%p"
+    "c": "const void *const*"
   },
   {
-    "c": "const GLchar *",
-    "printf": "%p"
+    "c": "int64_t"
   },
   {
-    "c": "const GLuint *",
-    "printf": "%p"
+    "c": "unsigned long"
+  },
+  {
+    "c": "GLintptr"
+  },
+  {
+    "c": "GLsizeiptr"
+  },
+  {
+    "c": "GLushort"
   },
   {
     "c": "Display *"
@@ -118,5 +121,74 @@
   },
   {
     "c": "XVisualInfo *"
+  },
+  {
+    "c": "const GLchar *const*"
+  },
+  {
+    "c": "GLuint64EXT"
+  },
+  {
+    "c": "unsigned int"
+  },
+  {
+    "c": "GLDEBUGPROC"
+  },
+  {
+    "c": "GLDEBUGPROCARB"
+  },
+  {
+    "c": "char"
+  },
+  {
+    "c": "GLcharARB"
+  },
+  {
+    "c": "GLintptrARB"
+  },
+  {
+    "c": "GLsizeiptrARB"
+  },
+  {
+    "c": "GLsync"
+  },
+  {
+    "c": "GLint64"
+  },
+  {
+    "c": "GLclampd"
+  },
+  {
+    "c": "GLXPbuffer"
+  },
+  {
+    "c": "GLXWindow"
+  },
+  {
+    "c": "Window"
+  },
+  {
+    "c": "Pixmap"
+  },
+  {
+    "c": "GLXPixmap"
+  },
+  {
+    "c": "GLXContext"
+  },
+  {
+    "c": "GLXContextID"
+  },
+  {
+    "c": "int32_t"
+  },
+  {
+    "c": "GLXFBConfigSGIX"
+  },
+  {
+    "c": "GLXPbufferSGIX"
+  },
+  {
+    "c": "GLvdpauSurfaceNV"
   }
 ]

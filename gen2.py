@@ -14,8 +14,8 @@ import parse_xml
 @attr.s
 class Type:
     ctype = attr.ib()
-    stype = attr.ib()
-    printf = attr.ib()
+    stype = attr.ib(default=None)
+    printf = attr.ib(default=None)
 
     @property
     def is_void(self):
@@ -68,7 +68,6 @@ class Function:
     name = attr.ib()
     return_type = attr.ib()
     params = attr.ib()
-    trace = attr.ib(default=True)
 
     def has_return(self):
         return not self.return_type.is_void
@@ -80,23 +79,22 @@ class Function:
     def cxx_prototype(self):
         return '{};'.format(self.cxx_decl())
 
+    def cxx_function_type_alias(self):
+        return 'using Fn = {} (*)({});'.format(
+            self.return_type.ctype,
+            ', '.join(param.ptype.ctype for param in self.params))
+
     def cxx_body(self):
         lines = ['{} {{'.format(self.cxx_decl())]
-        # Function type alias
-        lines.append('  using Fn = {} (*)({});'.format(
-            self.return_type.ctype,
-            ', '.join(param.ptype.ctype for param in self.params)))
+        lines.append('  ' + self.cxx_function_type_alias())
         # Static function pointer to the "real" call
         lines.append('  static Fn real_fn = reinterpret_cast<Fn>(get_real_proc_addr("{}"));'.format(self.name))
+        lines.append('  pumpkintown::serialize()->write(pumpkintown::FunctionId::{});'.format(
+            self.name))
         if self.is_serializable():
-            lines.append('  pumpkintown::serialize()->write(pumpkintown::FunctionId::{});'.format(
-                self.name))
             for param in self.params:
                 lines.append('  pumpkintown::serialize()->write(static_cast<{}>({}));'.format(
                     param.ptype.stype, param.name))
-        else:
-            # TODO
-            pass
 
         # Call the real function and return its value if it has one
         lines.append('  {}real_fn({});'.format(
@@ -142,6 +140,15 @@ def load_glinfo(args):
             stype = typ.get('serialize')
             printf = typ.get('printf')
             types[ctype] = Type(ctype, stype, printf)
+
+            const_ctype = 'const ' + ctype
+            ptr_ctype = ctype + ' *'
+            const_ptr_ctype = 'const ' + ptr_ctype
+            const_ptr_ptr_ctype = 'const ' + ptr_ctype + '*'
+            types[const_ctype] = Type(const_ctype)
+            types[ptr_ctype] = Type(ptr_ctype)
+            types[const_ptr_ctype] = Type(const_ptr_ctype)
+            types[const_ptr_ptr_ctype] = Type(const_ptr_ptr_ctype)
 
     path1 = os.path.join(args.source_dir, 'OpenGL-Registry/xml/gl.xml')
     path2 = os.path.join(args.source_dir, 'OpenGL-Registry/xml/glx.xml')
@@ -208,26 +215,47 @@ def gen_function_id_header():
     return src
 
 
-def gen_schema_file():
+def gen_replay_cc():
     src = Source()
-    src.add('@0xdf015bce75b91ed3;')
-    src.add('using Cxx = import "/capnp/c++.capnp";')
-    src.add('$Cxx.namespace("pumpkintown");')
-    src.add('struct Function {')
-    src.add('  union {')
-    index = 0
-    for func in FUNCTIONS:
-        if not func.is_serializable():
-            continue
-        src.add('    {} @{} :{};'.format(func.capnp_union_name(), index,
-                                         func.capnp_struct_name()))
-        index += 1
+    src.add_cxx_include('pumpkintown_replay.hh')
+    src.add_cxx_include('waffle-1/waffle.h', system=True)
+    src.add_cxx_include('pumpkintown_deserialize.hh')
+    src.add_cxx_include('pumpkintown_gl_types.hh')
+    src.add('namespace pumpkintown {')
+    src.add('bool replay(Deserialize* deserialize, waffle_window* waffle_window) {')
+    src.add('  FunctionId function_id{FunctionId::Invalid};')
+    src.add('  if (!deserialize->read(&function_id)) {')
+    src.add('    return false;')
     src.add('  }')
-    src.add('}')
+    src.add('  switch (function_id) {')
+    src.add('  case FunctionId::Invalid:')
+    src.add('    break;')
     for func in FUNCTIONS:
-        if not func.is_serializable():
+        src.add('  case FunctionId::{}:'.format(func.name))
+        if func.name == 'glXSwapBuffers':
+            src.add('    waffle_window_swap_buffers(waffle_window);')
+            src.add('    break;')
             continue
-        src.add(func.capnp_struct())
+        elif not func.is_serializable():
+            src.add('    printf("stub: {}\\n");'.format(func.name))
+            src.add('    break;')
+            continue
+        src.add('    {')
+        src.add('      ' + func.cxx_function_type_alias())
+        # Static function pointer to the "real" call
+        src.add('      static Fn fn = reinterpret_cast<Fn>(waffle_get_proc_address("{}"));'.format(func.name))
+        for param in func.params:
+            src.add('      {} {};'.format(param.ptype.stype, param.name))
+            src.add('      if (!deserialize->read(&{})) {{'.format(param.name))
+            src.add('        return false;')
+            src.add('      }')
+        src.add('      fn({});'.format(', '.join(param.name for param in func.params)))
+        src.add('      break;')
+        src.add('    }')
+    src.add('  }')
+    src.add('  return true;')
+    src.add('}')
+    src.add('}')
     return src
 
 
@@ -288,11 +316,8 @@ def main():
 
     gen_function_id_header().write(os.path.join(args.build_dir, 'pumpkintown_function_id.hh'))
 
-    #path = os.path.join(args.build_dir, 'pumpkintown_schema.capnp')
-    #gen_schema_file().write(path)
-    #subprocess.check_call(('capnp', 'compile', '-oc++', path))
-
     gen_dump_cc().write(os.path.join(args.build_dir, 'pumpkintown_dump_gen.cc'))
+    gen_replay_cc().write(os.path.join(args.build_dir, 'pumpkintown_replay_gen.cc'))
 
 
 if __name__ == '__main__':
