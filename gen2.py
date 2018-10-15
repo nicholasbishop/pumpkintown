@@ -21,6 +21,19 @@ class Type:
     def is_void(self):
         return self.ctype == 'void'
 
+    @property
+    def read_method(self):
+        return {'int8_t': 'read_i8',
+                'int16_t': 'read_i16',
+                'int32_t': 'read_i32',
+                'int64_t': 'read_i64',
+                'uint8_t': 'read_u8',
+                'uint16_t': 'read_u16',
+                'uint32_t': 'read_u32',
+                'uint64_t': 'read_u64',
+                'float': 'read_f32',
+                'double': 'read_f64'}[self.stype]
+
 
 class Source:
     def __init__(self):
@@ -382,17 +395,16 @@ def gen_replay_cc():
         for param in func.params:
             if param.custom:
                 src.add('      std::vector<uint8_t> {};'.format(param.name))
-                src.add('      uint64_t {}_num_bytes = 0;'.format(param.name))
-                src.add('      deserialize_->read(&{}_num_bytes);'.format(param.name))
+                src.add('      uint64_t {}_num_bytes = deserialize_->read_u64();'.format(param.name))
                 src.add('      {}.resize({}_num_bytes);'.format(
                     param.name, param.name))
-                src.add('      deserialize_->read({}.data(), {}_num_bytes);'.format(
+                src.add('      deserialize_->read_u8v({}.data(), {}_num_bytes);'.format(
                     param.name, param.name))
                 args.append('{}.data()'.format(param.name))
             else:
-                src.add('      {} {};'.format(param.ptype.stype, param.name))
+                src.add('      {} {} = deserialize_->{}();'.format(
+                    param.ptype.stype, param.name, param.ptype.read_method))
                 args.append(param.name)
-                src.add('      deserialize_->read(&{});'.format(param.name))
         src.add('      {}({});'.format(func.name, ', '.join(args)))
         src.add('      break;')
         src.add('    }')

@@ -19,6 +19,13 @@ void read_exact(FILE* f, uint8_t* buf, uint64_t num_bytes) {
   }
 }
 
+template<typename T>
+T read_value(FILE* f) {
+  T t;
+  read_exact(f, reinterpret_cast<uint8_t*>(&t), sizeof(T));
+  return t;
+}
+
 }
 
 Deserialize::~Deserialize() {
@@ -45,48 +52,48 @@ uint64_t Deserialize::position() {
 
 // TODO(nicholasbishop): byte ordering
 
-void Deserialize::read(uint8_t* value, uint64_t size) {
+void Deserialize::read_u8v(uint8_t* value, uint64_t size) {
   read_exact(file_, value, size);
 }
 
-void Deserialize::read(int8_t* value) {
-  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+int8_t Deserialize::read_i8() {
+  return read_value<int8_t>(file_);
 }
 
-void Deserialize::read(int16_t* value) {
-  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+int16_t Deserialize::read_i16() {
+  return read_value<int16_t>(file_);
 }
 
-void Deserialize::read(int32_t* value) {
-  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+int32_t Deserialize::read_i32() {
+  return read_value<int32_t>(file_);
 }
 
-void Deserialize::read(int64_t* value) {
-  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+int64_t Deserialize::read_i64() {
+  return read_value<int64_t>(file_);
 }
 
-void Deserialize::read(uint8_t* value) {
-  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+uint8_t Deserialize::read_u8() {
+  return read_value<uint8_t>(file_);
 }
 
-void Deserialize::read(uint16_t* value) {
-  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+uint16_t Deserialize::read_u16() {
+  return read_value<uint16_t>(file_);
 }
 
-void Deserialize::read(uint32_t* value) {
-  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+uint32_t Deserialize::read_u32() {
+  return read_value<uint32_t>(file_);
 }
 
-void Deserialize::read(uint64_t* value) {
-  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+uint64_t Deserialize::read_u64() {
+  return read_value<uint64_t>(file_);
 }
 
-void Deserialize::read(float* value) {
-  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+float Deserialize::read_f32() {
+  return read_value<float>(file_);
 }
 
-void Deserialize::read(double* value) {
-  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(*value));
+double Deserialize::read_f64() {
+  return read_value<double>(file_);
 }
 
 FunctionId Deserialize::read_function_id() {

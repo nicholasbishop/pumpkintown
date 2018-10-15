@@ -18,12 +18,10 @@ Replay::Replay(Deserialize* deserialize, waffle_window* waffle_window)
     : deserialize_(deserialize), waffle_window_(waffle_window) {}
 
 void Replay::gen_textures() {
-  int32_t count{0};
-  deserialize_->read(&count);
+  int32_t count = deserialize_->read_i32();
   std::vector<uint32_t> old_ids;
   for (int32_t i{0}; i < count; i++) {
-    uint32_t id{0};
-    deserialize_->read(&id);
+    uint32_t id = deserialize_->read_u32();
     old_ids.emplace_back(id);
   }
   std::vector<uint32_t> new_ids;
@@ -35,10 +33,8 @@ void Replay::gen_textures() {
 }
 
 void Replay::bind_texture() {
-  uint32_t target{0};
-  deserialize_->read(&target);
-  uint32_t old_texture{0};
-  deserialize_->read(&old_texture);
+  uint32_t target = deserialize_->read_u32();
+  uint32_t old_texture = deserialize_->read_u32();
 
   glBindTexture(target, texture_ids_[old_texture]);
 }

@@ -18,20 +18,20 @@ class Deserialize {
 
   uint64_t position();
 
-  void read(uint8_t* value, uint64_t size);
+  void read_u8v(uint8_t* value, uint64_t size);
 
-  void read(int8_t* value);
-  void read(int16_t* value);
-  void read(int32_t* value);
-  void read(int64_t* value);
+  int8_t read_i8();
+  int16_t read_i16();
+  int32_t read_i32();
+  int64_t read_i64();
 
-  void read(uint8_t* value);
-  void read(uint16_t* value);
-  void read(uint32_t* value);
-  void read(uint64_t* value);
+  uint8_t read_u8();
+  uint16_t read_u16();
+  uint32_t read_u32();
+  uint64_t read_u64();
 
-  void read(float* value);
-  void read(double* value);
+  float read_f32();
+  double read_f64();
 
   FunctionId read_function_id();
 

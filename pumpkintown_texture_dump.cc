@@ -30,40 +30,29 @@ int main(int argc, char** argv) {
     // printf("%s, pos=%lu\n", function_id_to_string(function_id),
     //        deserialize.position());
 
-    uint64_t msg_size{0};
-    deserialize.read(&msg_size);
+    uint64_t msg_size = deserialize.read_u64();
 
     if (function_id != FunctionId::glTexImage2D) {
       deserialize.advance(msg_size);
       continue;
     }
 
-    uint32_t target;
-    deserialize.read(&target);
-    int32_t level;
-    deserialize.read(&level);
-    int32_t internalformat;
-    deserialize.read(&internalformat);
-    int32_t width;
-    deserialize.read(&width);
-    int32_t height;
-    deserialize.read(&height);
-    printf("%d, %d\n", width, height);
-    int32_t border;
-    deserialize.read(&border);
-    uint32_t format;
-    deserialize.read(&format);
-    uint32_t type;
-    deserialize.read(&type);
+    /* uint32_t target = */deserialize.read_u32();
+    /* int32_t level = */deserialize.read_i32();
+    /* int32_t internalformat = */deserialize.read_i32();
+    int32_t width = deserialize.read_i32();
+    int32_t height = deserialize.read_i32();
+    /*int32_t border = */deserialize.read_i32();
+    uint32_t format = deserialize.read_u32();
+    /*uint32_t type = */deserialize.read_u32();
     std::vector<uint8_t> pixels;
-    uint64_t pixels_num_bytes = 0;
-    deserialize.read(&pixels_num_bytes);
+    uint64_t pixels_num_bytes = deserialize.read_u64();
     if (pixels_num_bytes == 0) {
       continue;
     }
 
     pixels.resize(pixels_num_bytes);
-    deserialize.read(pixels.data(), pixels_num_bytes);
+    deserialize.read_u8v(pixels.data(), pixels_num_bytes);
 
     const auto num_components{gl_texture_format_num_components(format)};
 
