@@ -10,6 +10,8 @@ add_custom_command(
   OUTPUT
   pumpkintown_dump_gen.cc
   pumpkintown_function_id.hh
+  pumpkintown_function_name.cc
+  pumpkintown_gl_enum.hh
   pumpkintown_gl_gen.cc
   pumpkintown_gl_gen.hh
   pumpkintown_replay_gen.cc
@@ -19,6 +21,7 @@ add_custom_command(
 add_library(pumpkintown
   SHARED
   pumpkintown_dlib.cc
+  pumpkintown_function_name.cc
   pumpkintown_gl_gen.cc
   pumpkintown_serialize.cc)
 
@@ -32,13 +35,16 @@ include_directories(/usr/local/include/waffle-1)
 
 add_executable(pumpkintown_texture_dump
   pumpkintown_deserialize.cc
+  pumpkintown_function_name.cc
+  pumpkintown_gl_util.cc
   pumpkintown_texture_dump.cc)
 
 add_executable(pumpkintown_replay
   pumpkintown_deserialize.cc
   pumpkintown_gl_functions.cc
   pumpkintown_replay.cc
-  pumpkintown_replay_gen.cc)
+  pumpkintown_replay_gen.cc
+  pumpkintown_gl_util.cc)
 
 target_link_libraries(pumpkintown_replay waffle-1)
 

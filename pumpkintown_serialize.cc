@@ -1,3 +1,4 @@
+#include "pumpkintown_gl_util.hh"
 #include "pumpkintown_serialize.hh"
 
 namespace pumpkintown {
@@ -78,6 +79,10 @@ bool Serialize::write(const double value) {
 }
 
 bool Serialize::write(const FunctionId value) {
+  // TODO
+  if (true) {
+    fprintf(stderr, "%s\n", function_id_to_string(value));
+  }
   return write_all(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
 

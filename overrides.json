@@ -2,7 +2,14 @@
   "glTexImage2D": {
     "params": {
       "pixels": {
-        "direction": "input"
+        "custom": true
+      }
+    }
+  },
+  "glGenTextures": {
+    "params": {
+      "textures": {
+        "custom": true
       }
     }
   }

@@ -39,6 +39,10 @@ bool Deserialize::done() {
   return feof(file_);
 }
 
+uint64_t Deserialize::position() {
+  return ftell(file_);
+}
+
 // TODO(nicholasbishop): byte ordering
 
 void Deserialize::read(uint8_t* value, uint64_t size) {
@@ -87,8 +91,19 @@ void Deserialize::read(double* value) {
 
 FunctionId Deserialize::read_function_id() {
   FunctionId value{FunctionId::Invalid};
-  read_exact(file_, reinterpret_cast<uint8_t*>(value), sizeof(value));
+  read_exact(file_, reinterpret_cast<uint8_t*>(&value), sizeof(value));
   return value;
+}
+
+void Deserialize::advance(uint64_t num_bytes) {
+  if (num_bytes == 0) {
+    return;
+  }
+  long offset = num_bytes;
+  if (fseek(file_, offset, SEEK_CUR) != 0) {
+    printf("error: %d\n", errno);
+    throw std::runtime_error("seek failed");
+  }
 }
 
 }

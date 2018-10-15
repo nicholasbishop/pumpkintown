@@ -14,8 +14,6 @@ class Serialize;
 
 Serialize* serialize();
 
-bool serialize_standard_gl_gen(int32_t count, uint32_t* array);
-
 uint64_t glTexImage2D_pixels_num_bytes(GLenum target,
   	GLint level,
   	GLint internalformat,
@@ -25,6 +23,8 @@ uint64_t glTexImage2D_pixels_num_bytes(GLenum target,
   	GLenum format,
   	GLenum type,
   	const void *pixels);
+
+uint64_t glGenTextures_textures_num_bytes(GLsizei n, GLuint* textures);
 
 }
 

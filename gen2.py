@@ -51,17 +51,11 @@ class Source:
             wfile.write(self.text())
 
 
-class Direction(enum.Enum):
-    Invalid = 0
-    Input = 1
-    Output = 2
-
-
 @attr.s
 class Param:
     ptype = attr.ib()
     name = attr.ib()
-    direction = attr.ib(default=Direction.Invalid)
+    custom = attr.ib(default=False)
 
     def cxx(self):
         return '{} {}'.format(self.ptype.ctype, self.name)
@@ -70,7 +64,7 @@ class Param:
         return self.ptype.stype
 
     def is_serializable(self):
-        return self.ptype.stype or self.direction != Direction.Invalid
+        return self.ptype.stype or self.custom
 
 
 @attr.s
@@ -108,14 +102,34 @@ class Function:
         lines.append('  ' + self.cxx_function_type_alias())
         # Static function pointer to the "real" call
         lines.append('  static Fn real_fn = reinterpret_cast<Fn>(get_real_proc_addr("{}"));'.format(self.name))
+        # Call the real function
+        lines.append('  {}real_fn({});'.format(
+            'auto return_value = ' if self.has_return() else '',
+            ', '.join(param.name for param in self.params)))
+
+        # Store the function ID
         lines.append('  pumpkintown::serialize()->write(pumpkintown::FunctionId::{});'.format(
             self.name))
+
         #lines.append('  fprintf(stderr, "trace: {}\\n");'.format(self.name))
+
         if self.is_serializable():
+            param_sizes = []
             for param in self.params:
-                if param.direction == Direction.Input:
+                if param.custom:
                     lines.append('  const uint64_t {}_num_bytes = pumpkintown::{}_{}_num_bytes({});'.format(
                         param.name, self.name, param.name, self.cxx_call_args()))
+                    param_sizes.append('sizeof(uint64_t)')
+                    param_sizes.append('{}_num_bytes'.format(param.name))
+                else:
+                    param_sizes.append('sizeof({})'.format(param.ptype.stype))
+
+            lines.append('  const uint64_t params_num_bytes = {};'.format(
+                ' + '.join(param_sizes) if self.params else '0'))
+            lines.append('  pumpkintown::serialize()->write(params_num_bytes);')
+            
+            for param in self.params:
+                if param.custom:
                     lines.append('  pumpkintown::serialize()->write({}_num_bytes);'.format(
                         param.name))
                     lines.append('  pumpkintown::serialize()->write(reinterpret_cast<const uint8_t*>({}), {}_num_bytes);'.format(
@@ -123,15 +137,8 @@ class Function:
                 else:
                     lines.append('  pumpkintown::serialize()->write(static_cast<{}>({}));'.format(
                         param.ptype.stype, param.name))
-
-        # Call the real function
-        lines.append('  {}real_fn({});'.format(
-            'auto return_value = ' if self.has_return() else '',
-            ', '.join(param.name for param in self.params)))
-
-        if self.name == 'glGenTextures':
-            lines.append('  pumpkintown::serialize_standard_gl_gen({});'.format(
-                ', '.join(param.name for param in self.params)))
+        else:
+            lines.append('  pumpkintown::serialize()->write(static_cast<uint64_t>(0));')
 
         # Return the real function's result if it has one
         if self.has_return():
@@ -214,8 +221,8 @@ def load_glinfo(args):
                 if func.name == key:
                     for param_name, overrides in val.get('params', {}).items():
                         param = func.param(param_name)
-                        if overrides.get('direction') == 'input':
-                            param.direction = Direction.Input
+                        if overrides.get('custom'):
+                            param.custom = True
                     break
 
 
@@ -265,7 +272,7 @@ def gen_gl_enum_header():
     for name, value in ENUMS.items():
         src.add('  {} = {},'.format(name, value))
     src.add('};')
-    src.add_guard('PUMPKINTOWN_FUNCTION_ID_HH_')
+    src.add_guard('PUMPKINTOWN_GL_ENUM_HH_')
     return src
 
 
@@ -273,12 +280,32 @@ def gen_function_id_header():
     src = Source()
     src.add('namespace pumpkintown {')
     src.add('enum class FunctionId {')
-    src.add('  Invalid,')
-    for func in FUNCTIONS:
-        src.add('  {},'.format(func.name))
+    src.add('  Invalid = 0,')
+    # Number each entry to make looking up functions easier during
+    # debugging
+    for index, func in enumerate(FUNCTIONS):
+        src.add('  {} = {},'.format(func.name, index + 1))
     src.add('};')
     src.add('}')
     src.add_guard('PUMPKINTOWN_FUNCTION_ID_HH_')
+    return src
+
+
+def gen_function_name_source():
+    src = Source()
+    src.add_cxx_include('pumpkintown_function_id.hh')
+    src.add('namespace pumpkintown {')
+    src.add('const char* function_id_to_string(const FunctionId id) {')
+    src.add('  switch (id) {')
+    src.add('  case FunctionId::Invalid:')
+    src.add('    break;')
+    for func in FUNCTIONS:
+        src.add('  case FunctionId::{}:'.format(func.name))
+        src.add('    return "{}";'.format(func.name))
+    src.add('  }')
+    src.add('  return "Invalid";')
+    src.add('}')
+    src.add('}')
     return src
 
 
@@ -353,7 +380,7 @@ def gen_replay_cc():
         src.add('    {')
         args = []
         for param in func.params:
-            if param.direction == Direction.Input:
+            if param.custom:
                 src.add('      std::vector<uint8_t> {};'.format(param.name))
                 src.add('      uint64_t {}_num_bytes = 0;'.format(param.name))
                 src.add('      deserialize_->read(&{}_num_bytes);'.format(param.name))
@@ -428,6 +455,7 @@ def main():
     gen_hh_file().write(os.path.join(args.build_dir, 'pumpkintown_gl_gen.hh'))
 
     gen_function_id_header().write(os.path.join(args.build_dir, 'pumpkintown_function_id.hh'))
+    gen_function_name_source().write(os.path.join(args.build_dir, 'pumpkintown_function_name.cc'))
 
     gen_gl_enum_header().write(os.path.join(args.build_dir, 'pumpkintown_gl_enum.hh'))
     gen_gl_functions_header().write(os.path.join(args.build_dir, 'pumpkintown_gl_functions.hh'))

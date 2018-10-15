@@ -82,18 +82,6 @@ Serialize* serialize() {
   return &s;
 }
 
-bool serialize_standard_gl_gen(int32_t count, uint32_t* array) {
-  if (!serialize()->write(count)) {
-    return false;
-  }
-  for (int32_t i{0}; i < count; i++) {
-    if (!serialize()->write(array[i])) {
-      return false;
-    }
-  }
-  return true;
-}
-
 uint64_t gl_texture_format_num_components(const GLenum type) {
   switch (type) {
     case GL_RED:
@@ -133,6 +121,10 @@ uint64_t glTexImage2D_pixels_num_bytes(GLenum target,
   return (gl_texture_type_num_bytes(type) *
           gl_texture_format_num_components(format) *
           width * height);
+}
+
+uint64_t glGenTextures_textures_num_bytes(GLsizei n, GLuint* textures) {
+  return n * sizeof(*textures);
 }
 
 }

@@ -16,6 +16,8 @@ class Deserialize {
 
   bool done();
 
+  uint64_t position();
+
   void read(uint8_t* value, uint64_t size);
 
   void read(int8_t* value);
@@ -32,6 +34,8 @@ class Deserialize {
   void read(double* value);
 
   FunctionId read_function_id();
+
+  void advance(uint64_t num_bytes);
 
  private:
   FILE* file_{nullptr};
