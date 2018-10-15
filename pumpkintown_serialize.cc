@@ -1,24 +1,8 @@
 #include "pumpkintown_gl_util.hh"
+#include "pumpkintown_io.hh"
 #include "pumpkintown_serialize.hh"
 
 namespace pumpkintown {
-
-namespace {
-
-bool write_all(FILE* f, const uint8_t* buf, const uint64_t size) {
-  uint64_t bytes_remaining = size;
-  while (bytes_remaining > 0) {
-    const auto bytes_written = fwrite(buf, 1, bytes_remaining, f);
-    if (bytes_written <= 0) {
-      return false;
-    }
-    bytes_remaining -= bytes_written;
-    buf += bytes_written;
-  }
-  return true;
-}
-
-}
 
 Serialize::~Serialize() {
   if (file_) {
@@ -38,52 +22,52 @@ bool Serialize::is_open() {
   return file_ != nullptr;
 }
 
-bool Serialize::write(const uint8_t* value, uint64_t num_bytes) {
-  return write_all(file_, value, num_bytes);
+void Serialize::write(const uint8_t* value, uint64_t num_bytes) {
+  return write_exact(file_, value, num_bytes);
 }
 
-bool Serialize::write(const int8_t value) {
-  return write_all(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
+void Serialize::write(const int8_t value) {
+  return write_exact(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
 
-bool Serialize::write(const int16_t value) {
-  return write_all(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
+void Serialize::write(const int16_t value) {
+  return write_exact(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
 
-bool Serialize::write(const int32_t value) {
-  return write_all(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
+void Serialize::write(const int32_t value) {
+  return write_exact(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
 
-bool Serialize::write(const uint8_t value) {
-  return write_all(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
+void Serialize::write(const uint8_t value) {
+  return write_exact(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
 
-bool Serialize::write(const uint16_t value) {
-  return write_all(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
+void Serialize::write(const uint16_t value) {
+  return write_exact(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
 
-bool Serialize::write(const uint32_t value) {
-  return write_all(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
+void Serialize::write(const uint32_t value) {
+  return write_exact(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
 
-bool Serialize::write(const uint64_t value) {
-  return write_all(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
+void Serialize::write(const uint64_t value) {
+  return write_exact(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
 
-bool Serialize::write(const float value) {
-  return write_all(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
+void Serialize::write(const float value) {
+  return write_exact(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
 
-bool Serialize::write(const double value) {
-  return write_all(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
+void Serialize::write(const double value) {
+  return write_exact(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
 
-bool Serialize::write(const FunctionId value) {
+void Serialize::write(const FunctionId value) {
   // TODO
   if (true) {
     fprintf(stderr, "%s\n", function_id_to_string(value));
   }
-  return write_all(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
+  return write_exact(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));
 }
 
 }

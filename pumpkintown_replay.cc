@@ -9,34 +9,41 @@
 #include <waffle.h>
 
 #include "pumpkintown_deserialize.hh"
+#include "pumpkintown_function_structs.hh"
 #include "pumpkintown_gl_functions.hh"
 #include "pumpkintown_gl_types.hh"
+#include "pumpkintown_io.hh"
 
 namespace pumpkintown {
 
-Replay::Replay(Deserialize* deserialize, waffle_window* waffle_window)
-    : deserialize_(deserialize), waffle_window_(waffle_window) {}
+Replay::Replay(const std::string& path, waffle_window* waffle_window)
+    : iter_{path}, waffle_window_{waffle_window} {}
+
+void Replay::replay() {
+  while (!iter_.done()) {
+    iter_.next();
+    replay_one();
+  }
+}
 
 void Replay::gen_textures() {
-  int32_t count = deserialize_->read_i32();
-  std::vector<uint32_t> old_ids;
-  for (int32_t i{0}; i < count; i++) {
-    uint32_t id = deserialize_->read_u32();
-    old_ids.emplace_back(id);
-  }
+  FnGlGenTextures fn;
+  fn.read(iter_.file());
+
   std::vector<uint32_t> new_ids;
-  new_ids.resize(count);
-  glGenTextures(count, new_ids.data());
-  for (int32_t i{0}; i < count; i++) {
-    texture_ids_[old_ids[i]] = new_ids[i];
+  new_ids.resize(fn.textures_length);
+  glGenTextures(fn.textures_length, new_ids.data());
+
+  for (uint32_t i{0}; i < fn.textures_length; i++) {
+    texture_ids_[fn.textures[i]] = new_ids[i];
   }
 }
 
 void Replay::bind_texture() {
-  uint32_t target = deserialize_->read_u32();
-  uint32_t old_texture = deserialize_->read_u32();
+  FnGlBindTexture fn;
+  fn.read(iter_.file());
 
-  glBindTexture(target, texture_ids_[old_texture]);
+  glBindTexture(fn.target, texture_ids_[fn.texture]);
 }
 
 }
@@ -84,17 +91,8 @@ int main(int argc, char** argv) {
   waffle_window_show(window);
   waffle_make_current(dpy, window, ctx);
 
-  pumpkintown::Deserialize deserialize;
-  // TODO
-  if (!deserialize.open(argv[1])) {
-    fprintf(stderr, "failed to open trace\n");
-    exit(1);
-  }
+  pumpkintown::Replay replay(argv[1], window);
 
-  pumpkintown::Replay replay(&deserialize, window);
-  while (!deserialize.done()) {
-    replay.replay();
-  }
 
   //waffle_window_swap_buffers(window);
 

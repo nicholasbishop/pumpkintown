@@ -2,14 +2,14 @@
   "glTexImage2D": {
     "params": {
       "pixels": {
-        "custom": true
+        "array": "uint8_t"
       }
     }
   },
   "glGenTextures": {
     "params": {
       "textures": {
-        "custom": true
+        "array": "uint32_t"
       }
     }
   }

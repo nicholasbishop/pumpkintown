@@ -68,7 +68,7 @@ class Source:
 class Param:
     ptype = attr.ib()
     name = attr.ib()
-    custom = attr.ib(default=False)
+    array = attr.ib(default=None)
 
     def cxx(self):
         return '{} {}'.format(self.ptype.ctype, self.name)
@@ -77,7 +77,7 @@ class Param:
         return self.ptype.stype
 
     def is_serializable(self):
-        return self.ptype.stype or self.custom
+        return self.ptype.stype or self.array
 
 
 @attr.s
@@ -110,26 +110,12 @@ class Function:
     def cxx_call_args(self):
         return ', '.join(param.name for param in self.params)
 
+    # TODO delete this method
     def cxx_body(self):
-        lines = ['{} {{'.format(self.cxx_decl())]
-        lines.append('  ' + self.cxx_function_type_alias())
-        # Static function pointer to the "real" call
-        lines.append('  static Fn real_fn = reinterpret_cast<Fn>(get_real_proc_addr("{}"));'.format(self.name))
-        # Call the real function
-        lines.append('  {}real_fn({});'.format(
-            'auto return_value = ' if self.has_return() else '',
-            ', '.join(param.name for param in self.params)))
-
-        # Store the function ID
-        lines.append('  pumpkintown::serialize()->write(pumpkintown::FunctionId::{});'.format(
-            self.name))
-
-        #lines.append('  fprintf(stderr, "trace: {}\\n");'.format(self.name))
-
         if self.is_serializable():
             param_sizes = []
             for param in self.params:
-                if param.custom:
+                if param.array:
                     lines.append('  const uint64_t {}_num_bytes = pumpkintown::{}_{}_num_bytes({});'.format(
                         param.name, self.name, param.name, self.cxx_call_args()))
                     param_sizes.append('sizeof(uint64_t)')
@@ -142,7 +128,7 @@ class Function:
             lines.append('  pumpkintown::serialize()->write(params_num_bytes);')
             
             for param in self.params:
-                if param.custom:
+                if param.array:
                     lines.append('  pumpkintown::serialize()->write({}_num_bytes);'.format(
                         param.name))
                     lines.append('  pumpkintown::serialize()->write(reinterpret_cast<const uint8_t*>({}), {}_num_bytes);'.format(
@@ -153,18 +139,10 @@ class Function:
         else:
             lines.append('  pumpkintown::serialize()->write(static_cast<uint64_t>(0));')
 
-        # Return the real function's result if it has one
-        if self.has_return():
-            lines.append('  return return_value;')
-        lines.append('}')
         return lines
 
-    def capnp_struct_name(self):
+    def cxx_struct_name(self):
         return 'Fn{}{}'.format(self.name[0].upper(), self.name[1:]).replace('_', '')
-
-    def capnp_union_name(self):
-        name = self.capnp_struct_name()
-        return name[0].lower() + name[1:]
 
     def is_serializable(self):
         for param in self.params:
@@ -172,13 +150,11 @@ class Function:
                 return False
         return True
 
-    def capnp_struct(self):
-        lines = ['struct {} {{'.format(self.capnp_struct_name())]
-        for index, param in enumerate(self.params):
-            lines.append('  {} @{} :{};'.format(underscore_to_camel_case(param.name),
-                                                index, param.capnp_type()))
-        lines.append('}')
-        return lines
+    def has_array_params(self):
+        for param in self.params:
+            if param.array:
+                return True
+        return False
 
 
 FUNCTIONS = []
@@ -234,8 +210,7 @@ def load_glinfo(args):
                 if func.name == key:
                     for param_name, overrides in val.get('params', {}).items():
                         param = func.param(param_name)
-                        if overrides.get('custom'):
-                            param.custom = True
+                        param.array = overrides.get('array')
                     break
 
 
@@ -247,7 +222,7 @@ def gen_exports():
     return lines
 
 
-def gen_hh_file():
+def gen_trace_header():
     src = Source()
     src.add('#ifndef PUMPKINTOWN_GL_GEN_HH_')
     src.add('#define PUMPKINTOWN_GL_GEN_HH_')
@@ -257,14 +232,43 @@ def gen_hh_file():
     return src
 
 
-def gen_cc_file():
+def gen_trace_source():
     src = Source()
     src.add_cxx_include('cstring', system=True)
+    src.add_cxx_include('pumpkintown_function_structs.hh')
     src.add_cxx_include('pumpkintown_dlib.hh')
     src.add_cxx_include('pumpkintown_gl_gen.hh')
     src.add_cxx_include('pumpkintown_serialize.hh')
     for func in FUNCTIONS:
-        src.add(func.cxx_body())
+        src.add('{} {{'.format(func.cxx_decl()))
+        src.add('  ' + func.cxx_function_type_alias())
+        # Static function pointer to the "real" call
+        src.add('  static Fn real_fn = reinterpret_cast<Fn>(get_real_proc_addr("{}"));'.format(func.name))
+        # Call the real function
+        src.add('  {}real_fn({});'.format(
+            'auto return_value = ' if func.has_return() else '',
+            ', '.join(param.name for param in func.params)))
+        # Store the function ID
+        src.add('  pumpkintown::serialize()->write(pumpkintown::FunctionId::{});'.format(
+            func.name))
+        if func.is_serializable() and func.params:
+            src.add('  pumpkintown::{} fn;'.format(func.cxx_struct_name()))
+            for param in func.params:
+                if param.array:
+                    src.add('  fn.{0} = reinterpret_cast<const {1}*>({0});'.format(
+                        param.name, param.array))
+                else:
+                    src.add('  fn.{0} = {0};'.format(param.name))
+            if func.has_array_params():
+                src.add('  fn.finalize();')
+            src.add('  pumpkintown::serialize()->write(fn.num_bytes());')
+            src.add('  fn.write(pumpkintown::serialize()->file());')
+        else:
+            src.add('  pumpkintown::serialize()->write(static_cast<uint64_t>(0));')
+        # Return the real function's result if it has one
+        if func.has_return():
+            src.add('  return return_value;')
+        src.add('}')
     src.add('extern "C" void* glXGetProcAddress(const char* name) {')
     for func in FUNCTIONS:
         src.add('  if (strcmp(name, "{}") == 0) {{'.format(func.name))
@@ -291,8 +295,9 @@ def gen_gl_enum_header():
 
 def gen_function_id_header():
     src = Source()
+    src.add_cxx_include('cstdint', system=True)
     src.add('namespace pumpkintown {')
-    src.add('enum class FunctionId {')
+    src.add('enum class FunctionId : uint16_t {')
     src.add('  Invalid = 0,')
     # Number each entry to make looking up functions easier during
     # debugging
@@ -318,6 +323,81 @@ def gen_function_name_source():
     src.add('  }')
     src.add('  return "Invalid";')
     src.add('}')
+    src.add('}')
+    return src
+
+
+def gen_function_structs_header():
+    src = Source()
+    src.add_cxx_include('cstdio', system=True)
+    src.add_cxx_include('cstdint', system=True)
+    src.add('namespace pumpkintown {')
+    for func in FUNCTIONS:
+        if not func.is_serializable() or not func.params:
+            continue
+        # TODO(nicholasbishop): consider packing the struct
+        src.add('struct {} {{'.format(func.cxx_struct_name()))
+        if func.has_array_params():
+            src.add('  ~{}();'.format(func.cxx_struct_name()))
+            src.add('  void finalize();')
+        src.add('  uint64_t num_bytes() const;')
+        src.add('  void read(FILE* f);')
+        src.add('  void write(FILE* f);')
+        for param in func.params:
+            if param.array:
+                src.add('  uint64_t {}_length;'.format(param.name))
+                src.add('  const {}* {};'.format(param.array, param.name))
+            else:
+                src.add('  {} {};'.format(param.ptype.stype, param.name))
+        src.add('};')
+    src.add('}')
+    src.add_guard('PUMPKINTOWN_FUNCTION_STRUCTS_HH_')
+    return src
+
+
+def gen_function_structs_source():
+    src = Source()
+    src.add_cxx_include('pumpkintown_function_structs.hh')
+    src.add_cxx_include('pumpkintown_io.hh')
+    src.add('namespace pumpkintown {')
+    # TODO(nicholasbishop): currently the format is a little
+    # inefficient for pointers. We read and write them as part of
+    # the struct, but the actual values aren't used.
+    #
+    # TODO(nicholasbishop): byte order
+    for func in FUNCTIONS:
+        if not func.is_serializable() or not func.params:
+            continue
+        if func.has_array_params():
+            src.add('{0}::~{0}() {{'.format(func.cxx_struct_name()))
+            for param in func.params:
+                if param.array:
+                    src.add('  delete[] {};'.format(param.name))
+            src.add('}')
+        src.add('uint64_t {}::num_bytes() const {{'.format(func.cxx_struct_name()))
+        size_args = ['sizeof(*this)']
+        for param in func.params:
+            if param.array:
+                size_args.append('({0}_length * sizeof(*{0}))'.format(param.name))
+        src.add('  return {};'.format(' + '.join(size_args)))
+        src.add('}')
+        src.add('void {}::read(FILE* f) {{'.format(func.cxx_struct_name()))
+        src.add('  read_exact(f, this, sizeof(*this));')
+        for param in func.params:
+            if param.array:
+                src.add('  {0}* {1}_tmp = new {0}[{1}_length];'.format(
+                    param.array, param.name))
+                src.add('  read_exact(f, {0}_tmp, {0}_length);'.format(
+                    param.name))
+                src.add('  {0} = {0}_tmp;'.format(param.name))
+        src.add('}')
+        src.add('void {}::write(FILE* f) {{'.format(func.cxx_struct_name()))
+        src.add('  write_exact(f, this, sizeof(*this));')
+        for param in func.params:
+            if param.array:
+                src.add('  write_exact(f, {0}, {0}_length);'.format(
+                    param.name))
+        src.add('}')
     src.add('}')
     return src
 
@@ -357,20 +437,18 @@ def gen_gl_functions_source():
     return src
 
 
-def gen_replay_cc():
+def gen_replay_source():
     src = Source()
     src.add_cxx_include('pumpkintown_replay.hh')
     src.add_cxx_include('vector', system=True)
     src.add_cxx_include('waffle-1/waffle.h', system=True)
     src.add_cxx_include('pumpkintown_deserialize.hh')
+    src.add_cxx_include('pumpkintown_function_structs.hh')
     src.add_cxx_include('pumpkintown_gl_functions.hh')
     src.add_cxx_include('pumpkintown_gl_types.hh')
     src.add('namespace pumpkintown {')
-    src.add('bool Replay::replay() {')
-    src.add('  const FunctionId function_id{deserialize_->read_function_id()};')
-    # Skip past message size
-    src.add('  deserialize_->read_u64();')
-    src.add('  switch (function_id) {')
+    src.add('void Replay::replay_one() {')
+    src.add('  switch (iter_.function_id()) {')
     src.add('  case FunctionId::Invalid:')
     src.add('    break;')
     for func in FUNCTIONS:
@@ -393,25 +471,14 @@ def gen_replay_cc():
             src.add('    break;')
             continue
         src.add('    {')
-        args = []
-        for param in func.params:
-            if param.custom:
-                src.add('      std::vector<uint8_t> {};'.format(param.name))
-                src.add('      uint64_t {}_num_bytes = deserialize_->read_u64();'.format(param.name))
-                src.add('      {}.resize({}_num_bytes);'.format(
-                    param.name, param.name))
-                src.add('      deserialize_->read_u8v({}.data(), {}_num_bytes);'.format(
-                    param.name, param.name))
-                args.append('{}.data()'.format(param.name))
-            else:
-                src.add('      {} {} = deserialize_->{}();'.format(
-                    param.ptype.stype, param.name, param.ptype.read_method))
-                args.append(param.name)
-        src.add('      {}({});'.format(func.name, ', '.join(args)))
+        if func.params:
+            src.add('      {} fn;'.format(func.cxx_struct_name()))
+            src.add('      fn.read(iter_.file());')
+        src.add('      {}({});'.format(
+            func.name, ', '.join('fn.' + param.name for param in func.params)))
         src.add('      break;')
         src.add('    }')
     src.add('  }')
-    src.add('  return true;')
     src.add('}')
     src.add('}')
     return src
@@ -465,18 +532,20 @@ def main():
 
     load_glinfo(args)
 
-    gen_cc_file().write(os.path.join(args.build_dir, 'pumpkintown_gl_gen.cc'))
-    gen_hh_file().write(os.path.join(args.build_dir, 'pumpkintown_gl_gen.hh'))
+    gen_trace_source().write(os.path.join(args.build_dir, 'pumpkintown_trace.cc'))
+    gen_trace_header().write(os.path.join(args.build_dir, 'pumpkintown_trace.hh'))
 
     gen_function_id_header().write(os.path.join(args.build_dir, 'pumpkintown_function_id.hh'))
     gen_function_name_source().write(os.path.join(args.build_dir, 'pumpkintown_function_name.cc'))
+    gen_function_structs_header().write(os.path.join(args.build_dir, 'pumpkintown_function_structs.hh'))
+    gen_function_structs_source().write(os.path.join(args.build_dir, 'pumpkintown_function_structs.cc'))
 
     gen_gl_enum_header().write(os.path.join(args.build_dir, 'pumpkintown_gl_enum.hh'))
     gen_gl_functions_header().write(os.path.join(args.build_dir, 'pumpkintown_gl_functions.hh'))
     gen_gl_functions_source().write(os.path.join(args.build_dir, 'pumpkintown_gl_functions.cc'))
 
     #gen_dump_cc().write(os.path.join(args.build_dir, 'pumpkintown_dump_gen.cc'))
-    gen_replay_cc().write(os.path.join(args.build_dir, 'pumpkintown_replay_gen.cc'))
+    gen_replay_source().write(os.path.join(args.build_dir, 'pumpkintown_replay_gen.cc'))
 
 
 if __name__ == '__main__':

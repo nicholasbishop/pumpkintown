@@ -16,22 +16,25 @@ class Serialize {
 
   bool is_open();
 
-  bool write(const uint8_t* value, uint64_t num_bytes);
+  void write(const uint8_t* value, uint64_t num_bytes);
 
-  bool write(int8_t value);
-  bool write(int16_t value);
-  bool write(int32_t value);
-  bool write(int64_t value);
+  // TODO, pick an interface already
+  FILE* file() { return file_; }
 
-  bool write(uint8_t value);
-  bool write(uint16_t value);
-  bool write(uint32_t value);
-  bool write(uint64_t value);
+  void write(int8_t value);
+  void write(int16_t value);
+  void write(int32_t value);
+  void write(int64_t value);
 
-  bool write(float value);
-  bool write(double value);
+  void write(uint8_t value);
+  void write(uint16_t value);
+  void write(uint32_t value);
+  void write(uint64_t value);
 
-  bool write(FunctionId value);
+  void write(float value);
+  void write(double value);
+
+  void write(FunctionId value);
 
  private:
   FILE* file_{nullptr};

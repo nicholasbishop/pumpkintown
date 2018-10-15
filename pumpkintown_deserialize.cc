@@ -3,21 +3,11 @@
 #include <cstdio>
 #include <stdexcept>
 
+#include "pumpkintown_io.hh"
+
 namespace pumpkintown {
 
 namespace {
-
-void read_exact(FILE* f, uint8_t* buf, uint64_t num_bytes) {
-  uint64_t bytes_remaining = num_bytes;
-  while (bytes_remaining > 0) {
-    uint64_t bytes_read = fread(buf, 1, bytes_remaining, f);
-    if (bytes_read == 0) {
-      throw std::runtime_error("read failed");
-    }
-    bytes_remaining -= bytes_read;
-    buf += bytes_read;
-  }
-}
 
 template<typename T>
 T read_value(FILE* f) {
