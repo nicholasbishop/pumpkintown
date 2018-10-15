@@ -1,3 +1,6 @@
 [submodule "OpenGL-Registry"]
 	path = OpenGL-Registry
 	url = https://github.com/KhronosGroup/OpenGL-Registry.git
+[submodule "flatbuffers"]
+	path = flatbuffers
+	url = https://github.com/google/flatbuffers.git

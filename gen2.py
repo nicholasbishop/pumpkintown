@@ -145,6 +145,9 @@ class Function:
             'auto return_value = ' if self.has_return() else '',
             ', '.join(param.name for param in self.params)))
 
+        lines.append('  capnp::MallocMessageBuilder message;')
+        lines.append('  auto builder = message.initRoot<pumpkingtown::Function>()')
+
         # Store the function ID
         lines.append('  pumpkintown::serialize()->write(pumpkintown::FunctionId::{});'.format(
             self.name))
@@ -476,30 +479,27 @@ def gen_dump_cc():
     return src
 
 
-def gen_capnp():
+def gen_flatbuffers_schema():
     src = Source()
-    src.add('@0xed4a7b3fd26a420a;')
-    src.add('using Cxx = import "/capnp/c++.capnp";')
-    src.add('$Cxx.namespace("pumpkintown");')
+    src.add('namespace pumpkintown;')
     for func in FUNCTIONS:
         src.add('struct {} {{'.format(func.capnp_struct_name()))
         if func.is_serializable():
-            for index, param in enumerate(func.params):
+            for param in func.params:
                 name = underscore_to_camel_case(param.name)
                 if param.custom:
-                    src.add('  {} @{} :Data;'.format(name, index))
+                    src.add('  {}: Data;'.format(name))
                 else:
-                    src.add('  {} @{} :{};'.format(name,
-                                                   index,
-                                                   param.ptype.capnp_type()))
+                    src.add('  {}: {};'.format(name,
+                                               param.ptype.fb_type()))
         src.add('}')
-    src.add('struct Function {')
-    src.add('  union {')
-    for index, func in enumerate(FUNCTIONS):
-        src.add('    {} @{} :{};'.format(
-            func.capnp_union_name(), index, func.capnp_struct_name()))
-    src.add('  }')
-    src.add('}')
+    # src.add('struct Function {')
+    # src.add('  union {')
+    # for index, func in enumerate(FUNCTIONS):
+    #     src.add('    {} @{} :{};'.format(
+    #         func.capnp_union_name(), index, func.capnp_struct_name()))
+    # src.add('  }')
+    # src.add('}')
     return src
 
 
@@ -511,8 +511,8 @@ def main():
 
     load_glinfo(args)
 
-    gen_capnp().write(os.path.join(args.build_dir, 'pumpkintown.capnp'))
-    subprocess.check_call(('capnp', 'compile', '-oc++', 'pumpkintown.capnp'))
+    gen_flatbuffers_schema().write(os.path.join(args.build_dir, 'pumpkintown.fbs'))
+    subprocess.check_call((os.path.join(args.build_dir, 'flatbuffers', 'flatc'), '--cpp', 'pumpkintown.fbs'))
 
     gen_cc_file().write(os.path.join(args.build_dir, 'pumpkintown_gl_gen.cc'))
     gen_hh_file().write(os.path.join(args.build_dir, 'pumpkintown_gl_gen.hh'))
@@ -529,5 +529,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main(
-)
+    main()
