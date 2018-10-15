@@ -45,7 +45,11 @@ void Replay::bind_texture() {
 
 }
 
-int main() {
+int main(int argc, char** argv) {
+  if (argc != 2) {
+    return 1;
+  }
+
   struct waffle_display *dpy;
   struct waffle_config *config;
   struct waffle_window *window;
@@ -86,7 +90,7 @@ int main() {
 
   pumpkintown::Deserialize deserialize;
   // TODO
-  if (!deserialize.open("trace")) {
+  if (!deserialize.open(argv[1])) {
     fprintf(stderr, "failed to open trace\n");
     exit(1);
   }
