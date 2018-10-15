@@ -368,6 +368,8 @@ def gen_replay_cc():
     src.add('namespace pumpkintown {')
     src.add('bool Replay::replay() {')
     src.add('  const FunctionId function_id{deserialize_->read_function_id()};')
+    # Skip past message size
+    src.add('  deserialize_->read_u64();')
     src.add('  switch (function_id) {')
     src.add('  case FunctionId::Invalid:')
     src.add('    break;')
