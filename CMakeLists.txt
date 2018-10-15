@@ -8,6 +8,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_custom_command(
   OUTPUT
+  pumpkintown.capnp.c++
   pumpkintown_dump_gen.cc
   pumpkintown_function_id.hh
   pumpkintown_function_name.cc
@@ -21,6 +22,7 @@ add_custom_command(
 
 add_library(pumpkintown
   SHARED
+  pumpkintown.capnp.c++
   pumpkintown_dlib.cc
   pumpkintown_function_name.cc
   pumpkintown_gl_gen.cc

@@ -10,6 +10,19 @@ import attr
 
 import parse_xml
 
+def underscore_to_camel_case(string):
+    output = ''
+    cap_next = False
+    for char in string:
+        if char == '_':
+            cap_next = True
+        elif cap_next:
+            cap_next = False
+            output += char.upper()
+        else:
+            output += char
+    return output
+
 
 @attr.s
 class Type:
@@ -33,6 +46,18 @@ class Type:
                 'uint64_t': 'read_u64',
                 'float': 'read_f32',
                 'double': 'read_f64'}[self.stype]
+
+    def capnp_type(self):
+        return {'int8_t': 'Int8',
+                'int16_t': 'Int16',
+                'int32_t': 'Int32',
+                'int64_t': 'Int64',
+                'uint8_t': 'UInt8',
+                'uint16_t': 'UInt16',
+                'uint32_t': 'UInt32',
+                'uint64_t': 'UInt64',
+                'float': 'Float32',
+                'double': 'Float64'}[self.stype]
 
 
 class Source:
@@ -160,7 +185,8 @@ class Function:
         return lines
 
     def capnp_struct_name(self):
-        return 'Fn{}{}'.format(self.name[0].upper(), self.name[1:]).replace('_', '')
+        name = underscore_to_camel_case(self.name)
+        return 'Fn{}{}'.format(name[0].upper(), name[1:])
 
     def capnp_union_name(self):
         name = self.capnp_struct_name()
@@ -171,14 +197,6 @@ class Function:
             if not param.is_serializable():
                 return False
         return True
-
-    def capnp_struct(self):
-        lines = ['struct {} {{'.format(self.capnp_struct_name())]
-        for index, param in enumerate(self.params):
-            lines.append('  {} @{} :{};'.format(underscore_to_camel_case(param.name),
-                                                index, param.capnp_type()))
-        lines.append('}')
-        return lines
 
 
 FUNCTIONS = []
@@ -260,6 +278,7 @@ def gen_hh_file():
 def gen_cc_file():
     src = Source()
     src.add_cxx_include('cstring', system=True)
+    src.add_cxx_include('pumpkintown.capnp.h')
     src.add_cxx_include('pumpkintown_dlib.hh')
     src.add_cxx_include('pumpkintown_gl_gen.hh')
     src.add_cxx_include('pumpkintown_serialize.hh')
@@ -457,6 +476,33 @@ def gen_dump_cc():
     return src
 
 
+def gen_capnp():
+    src = Source()
+    src.add('@0xed4a7b3fd26a420a;')
+    src.add('using Cxx = import "/capnp/c++.capnp";')
+    src.add('$Cxx.namespace("pumpkintown");')
+    for func in FUNCTIONS:
+        src.add('struct {} {{'.format(func.capnp_struct_name()))
+        if func.is_serializable():
+            for index, param in enumerate(func.params):
+                name = underscore_to_camel_case(param.name)
+                if param.custom:
+                    src.add('  {} @{} :Data;'.format(name, index))
+                else:
+                    src.add('  {} @{} :{};'.format(name,
+                                                   index,
+                                                   param.ptype.capnp_type()))
+        src.add('}')
+    src.add('struct Function {')
+    src.add('  union {')
+    for index, func in enumerate(FUNCTIONS):
+        src.add('    {} @{} :{};'.format(
+            func.capnp_union_name(), index, func.capnp_struct_name()))
+    src.add('  }')
+    src.add('}')
+    return src
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('build_dir')
@@ -464,6 +510,9 @@ def main():
     args = parser.parse_args()
 
     load_glinfo(args)
+
+    gen_capnp().write(os.path.join(args.build_dir, 'pumpkintown.capnp'))
+    subprocess.check_call(('capnp', 'compile', '-oc++', 'pumpkintown.capnp'))
 
     gen_cc_file().write(os.path.join(args.build_dir, 'pumpkintown_gl_gen.cc'))
     gen_hh_file().write(os.path.join(args.build_dir, 'pumpkintown_gl_gen.hh'))

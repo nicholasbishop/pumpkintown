@@ -1,5 +1,9 @@
 ## Dependencies
 
+### Cap'n Proto
+
+https://capnproto.org/install.html#installation-unix
+
 ### Waffle
 
 https://github.com/waffle-gl/waffle.git
