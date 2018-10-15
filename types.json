@@ -199,5 +199,20 @@
   },
   {
     "c": "GLeglImageOES"
+  },
+  {
+    "c": "GLeglClientBufferEXT"
+  },
+  {
+    "c": "GLhalfNV"
+  },
+  {
+    "c": "GLclampx"
+  },
+  {
+    "c": "GLint64EXT"
+  },
+  {
+    "c": "float"
   }
 ]

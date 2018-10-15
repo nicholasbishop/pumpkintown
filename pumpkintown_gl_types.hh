@@ -57,5 +57,9 @@ using Font = void*;
 using GLDEBUGPROCKHR = void*;
 using GLeglImageOES = void*;
 using GLvoid = void;
+using GLhalfNV = unsigned short;
+using GLint64EXT = int64_t;
+using GLeglClientBufferEXT = void*;
+using GLclampx = int;
 
 #endif  // PUMPKINTOWN_GL_TYPES_HH_

@@ -12,6 +12,7 @@ add_custom_command(
   pumpkintown_function_id.hh
   pumpkintown_function_name.cc
   pumpkintown_gl_enum.hh
+  pumpkintown_gl_functions.cc
   pumpkintown_gl_gen.cc
   pumpkintown_gl_gen.hh
   pumpkintown_replay_gen.cc
