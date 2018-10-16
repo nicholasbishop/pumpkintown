@@ -8,16 +8,16 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_custom_command(
   OUTPUT
-  pumpkintown_dump_gen.cc
+  #pumpkintown_dump_gen.cc
   pumpkintown_function_id.hh
   pumpkintown_function_name.cc
-  pumpkintown_function_structs.hh
   pumpkintown_function_structs.cc
+  pumpkintown_function_structs.hh
   pumpkintown_gl_enum.hh
   pumpkintown_gl_functions.cc
+  pumpkintown_replay_gen.cc
   pumpkintown_trace.cc
   pumpkintown_trace.hh
-  pumpkintown_replay_gen.cc
   COMMAND ${PROJECT_SOURCE_DIR}/gen2.py ${CMAKE_CURRENT_BINARY_DIR} ${PROJECT_SOURCE_DIR}
   DEPENDS gen2.py parse_xml.py types.json overrides.json)
 
@@ -51,12 +51,12 @@ add_executable(pumpkintown_replay
   pumpkintown_deserialize.cc
   pumpkintown_function_structs.cc
   pumpkintown_gl_functions.cc
+  pumpkintown_gl_util.cc
   pumpkintown_io.cc
   pumpkintown_replay.cc
-  pumpkintown_replay_gen.cc
-  pumpkintown_gl_util.cc)
+  pumpkintown_replay_gen.cc)
 
 target_link_libraries(pumpkintown_replay waffle-1)
 
 add_custom_command(TARGET pumpkintown POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy libpumpkintown.so libGL.so.1)
+    COMMAND ${CMAKE_COMMAND} -E copy libpumpkintown.so gl/libGL.so.1)

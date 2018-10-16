@@ -60,15 +60,6 @@ void write_all(FILE* f, const uint8_t* buf, const uint64_t size) {
   }
 }
 
-void write_trace_item(const uint8_t* buf, const uint64_t size) {
-  // TODO cache file handle?
-  FILE* f = fopen("trace.fb", "ab");
-  const uint8_t* size_ptr = reinterpret_cast<const uint8_t*>(&size);
-  write_all(f, size_ptr, sizeof(size));
-  write_all(f, buf, size);
-  fclose(f);
-}
-
 namespace pumpkintown {
 
 Serialize* serialize() {

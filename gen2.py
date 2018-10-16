@@ -203,10 +203,10 @@ def gen_trace_header():
 
 def gen_trace_source():
     src = Source()
+    src.add_cxx_include('pumpkintown_trace.hh')
     src.add_cxx_include('cstring', system=True)
     src.add_cxx_include('pumpkintown_function_structs.hh')
     src.add_cxx_include('pumpkintown_dlib.hh')
-    src.add_cxx_include('pumpkintown_gl_gen.hh')
     src.add_cxx_include('pumpkintown_serialize.hh')
     for func in FUNCTIONS:
         src.add('{} {{'.format(func.cxx_decl()))

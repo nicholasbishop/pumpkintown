@@ -2,4 +2,4 @@
 
 set -eu
 
-cd build && ninja && LD_LIBRARY_PATH=. $@
+ninja -C build && LD_LIBRARY_PATH=build/gl $@
