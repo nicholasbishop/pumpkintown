@@ -27,6 +27,7 @@ add_library(pumpkintown
   pumpkintown_finalizers.cc
   pumpkintown_function_name.cc
   pumpkintown_function_structs.cc
+  pumpkintown_gl_util.cc
   pumpkintown_io.cc
   pumpkintown_serialize.cc
   pumpkintown_trace.cc)

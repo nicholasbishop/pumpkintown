@@ -110,37 +110,6 @@ class Function:
     def cxx_call_args(self):
         return ', '.join(param.name for param in self.params)
 
-    # TODO delete this method
-    def cxx_body(self):
-        if self.is_serializable():
-            param_sizes = []
-            for param in self.params:
-                if param.array:
-                    lines.append('  const uint64_t {}_num_bytes = pumpkintown::{}_{}_num_bytes({});'.format(
-                        param.name, self.name, param.name, self.cxx_call_args()))
-                    param_sizes.append('sizeof(uint64_t)')
-                    param_sizes.append('{}_num_bytes'.format(param.name))
-                else:
-                    param_sizes.append('sizeof({})'.format(param.ptype.stype))
-
-            lines.append('  const uint64_t params_num_bytes = {};'.format(
-                ' + '.join(param_sizes) if self.params else '0'))
-            lines.append('  pumpkintown::serialize()->write(params_num_bytes);')
-            
-            for param in self.params:
-                if param.array:
-                    lines.append('  pumpkintown::serialize()->write({}_num_bytes);'.format(
-                        param.name))
-                    lines.append('  pumpkintown::serialize()->write(reinterpret_cast<const uint8_t*>({}), {}_num_bytes);'.format(
-                        param.name, param.name))
-                else:
-                    lines.append('  pumpkintown::serialize()->write(static_cast<{}>({}));'.format(
-                        param.ptype.stype, param.name))
-        else:
-            lines.append('  pumpkintown::serialize()->write(static_cast<uint64_t>(0));')
-
-        return lines
-
     def cxx_struct_name(self):
         return 'Fn{}{}'.format(self.name[0].upper(), self.name[1:]).replace('_', '')
 
@@ -263,6 +232,10 @@ def gen_trace_source():
                 src.add('  fn.finalize();')
             src.add('  pumpkintown::serialize()->write(fn.num_bytes());')
             src.add('  fn.write(pumpkintown::serialize()->file());')
+            # Prevent double free
+            for param in func.params:
+                if param.array:
+                    src.add('  fn.{} = nullptr;'.format(param.name))
         else:
             src.add('  pumpkintown::serialize()->write(static_cast<uint64_t>(0));')
         # Return the real function's result if it has one
