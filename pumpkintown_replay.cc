@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
   waffle_make_current(dpy, window, ctx);
 
   pumpkintown::Replay replay(argv[1], window);
-
+  replay.replay();
 
   //waffle_window_swap_buffers(window);
 
