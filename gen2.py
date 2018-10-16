@@ -358,11 +358,15 @@ def gen_function_structs_source():
         src.add('  read_exact(f, this, sizeof(*this));')
         for param in func.params:
             if param.array:
-                src.add('  {0}* {1}_tmp = new {0}[{1}_length];'.format(
+                src.add('  if ({}_length > 0) {{'.format(param.name))
+                src.add('    {0}* {1}_tmp = new {0}[{1}_length];'.format(
                     param.array, param.name))
-                src.add('  read_exact(f, {0}_tmp, {0}_length);'.format(
+                src.add('    read_exact(f, {0}_tmp, {0}_length);'.format(
                     param.name))
-                src.add('  {0} = {0}_tmp;'.format(param.name))
+                src.add('    {0} = {0}_tmp;'.format(param.name))
+                src.add('  } else {')
+                src.add('    {} = nullptr;'.format(param.name))
+                src.add('  }')
         src.add('}')
         src.add('void {}::write(FILE* f) {{'.format(func.cxx_struct_name()))
         src.add('  write_exact(f, this, sizeof(*this));')
