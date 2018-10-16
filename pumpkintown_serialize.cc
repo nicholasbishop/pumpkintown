@@ -64,7 +64,7 @@ void Serialize::write(const double value) {
 
 void Serialize::write(const FunctionId value) {
   // TODO
-  if (true) {
+  if (false) {
     fprintf(stderr, "%s\n", function_id_to_string(value));
   }
   return write_exact(file_, reinterpret_cast<const uint8_t*>(&value), sizeof(value));

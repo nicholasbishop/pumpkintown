@@ -1,22 +1,17 @@
 #include "pumpkintown_dump.hh"
 
-#include <stdexcept>
-#include <string>
-#include <vector>
+namespace pumpkintown {
 
-#include "pumpkintown_deserialize.hh"
+Dump::Dump(const std::string& path)
+    : iter_(path) {}
 
-void read_exact(FILE* f, uint8_t* buf, const uint64_t size) {
-  uint64_t bytes_remaining = size;
-  while (bytes_remaining > 0) {
-    uint64_t bytes_read = fread(buf, 1, size, f);
-    if (bytes_read == 0) {
-      fclose(f);
-      throw std::runtime_error("read failed");
-    }
-    bytes_remaining -= bytes_read;
-    buf += bytes_read;
+void Dump::dump() {
+  while (!iter_.done()) {
+    iter_.next();
+    dump_one();
   }
+}
+
 }
 
 int main(int argc, char** argv) {
@@ -25,15 +20,6 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  pumpkintown::Deserialize d;
-  if (!d.open(argv[1])) {
-    fprintf(stderr, "failed to open %s\n", argv[1]);
-    return 1;
-  }
-
-  while (!d.done()) {
-    if (!handle_trace_item(&d)) {
-      fprintf(stderr, "handle_trace_item failed\n");
-    }
-  }
+  pumpkintown::Dump dump(argv[1]);
+  dump.dump();
 }

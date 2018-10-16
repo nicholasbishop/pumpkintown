@@ -7,10 +7,34 @@
     }
   },
   "glGenTextures": {
+    "custom_replay": true,
     "params": {
       "textures": {
         "array": "uint32_t"
       }
     }
+  },
+  "glLightfv": {
+    "params": {
+      "params": {
+        "array": "float"
+      }
+    }
+  },
+  "glMaterialfv": {
+    "params": {
+      "params": {
+        "array": "float"
+      }
+    }
+  },
+  "glGenLists": {
+    "custom_replay": true
+  },
+  "glNewList": {
+    "custom_replay": true
+  },
+  "glCallList": {
+    "custom_replay": true
   }
 }

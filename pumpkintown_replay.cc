@@ -46,6 +46,22 @@ void Replay::bind_texture() {
   glBindTexture(fn.target, texture_ids_[fn.texture]);
 }
 
+void Replay::custom_glGenLists(const FnGlGenLists& fn) {
+  const auto new_start{glGenLists(fn.range)};
+
+  for (int32_t i{0}; i < fn.range; i++) {
+    display_list_ids_[fn.return_value + i] = new_start + i;
+  }
+}
+
+void Replay::custom_glNewList(const FnGlNewList& fn) {
+  glNewList(display_list_ids_[fn.list], fn.mode);
+}
+
+void Replay::custom_glCallList(const FnGlCallList& fn) {
+  glCallList(display_list_ids_[fn.list]);
+}
+
 }
 
 int main(int argc, char** argv) {
@@ -73,7 +89,7 @@ int main(int argc, char** argv) {
     WAFFLE_DEPTH_SIZE, 8,
 
          
-    WAFFLE_DOUBLE_BUFFERED, false,
+    WAFFLE_DOUBLE_BUFFERED, true,
 
     0,
   };

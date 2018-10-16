@@ -85,6 +85,7 @@ class Function:
     name = attr.ib()
     return_type = attr.ib()
     params = attr.ib()
+    custom_replay = attr.ib(default=False)
 
     def param(self, name):
         for param in self.params:
@@ -180,6 +181,7 @@ def load_glinfo(args):
                     for param_name, overrides in val.get('params', {}).items():
                         param = func.param(param_name)
                         param.array = overrides.get('array')
+                    func.custom_replay = val.get('custom_replay')
                     break
 
 
@@ -222,6 +224,8 @@ def gen_trace_source():
             func.name))
         if func.is_serializable() and func.params:
             src.add('  pumpkintown::{} fn;'.format(func.cxx_struct_name()))
+            if func.has_return() and func.return_type.stype:
+                src.add('  fn.return_value = return_value;')
             for param in func.params:
                 if param.array:
                     src.add('  fn.{0} = reinterpret_cast<const {1}*>({0});'.format(
@@ -316,6 +320,8 @@ def gen_function_structs_header():
         src.add('  uint64_t num_bytes() const;')
         src.add('  void read(FILE* f);')
         src.add('  void write(FILE* f);')
+        if func.has_return() and func.return_type.stype:
+            src.add('  {} return_value;'.format(func.return_type.stype))
         for param in func.params:
             if param.array:
                 src.add('  uint64_t {}_length;'.format(param.name))
@@ -374,6 +380,7 @@ def gen_function_structs_source():
             if param.array:
                 src.add('  write_exact(f, {0}, {0}_length);'.format(
                     param.name))
+        src.add('  fflush(f);')
         src.add('}')
     src.add('}')
     return src
@@ -451,8 +458,11 @@ def gen_replay_source():
         if func.params:
             src.add('      {} fn;'.format(func.cxx_struct_name()))
             src.add('      fn.read(iter_.file());')
-        src.add('      {}({});'.format(
-            func.name, ', '.join('fn.' + param.name for param in func.params)))
+        if func.custom_replay:
+            src.add('      custom_{}(fn);'.format(func.name))
+        else:
+            src.add('      {}({});'.format(
+                func.name, ', '.join('fn.' + param.name for param in func.params)))
         src.add('      break;')
         src.add('    }')
     src.add('  }')
@@ -468,10 +478,8 @@ def gen_dump_cc():
     src.add_cxx_include('pumpkintown_deserialize.hh')
     src.add_cxx_include('pumpkintown_function_id.hh')
     src.add('namespace pumpkintown {')
-    src.add('bool handle_trace_item(Deserialize* deserialize) {')
-    src.add('  FunctionId function_id{FunctionId::Invalid};')
-    src.add('  deserialize->read(&function_id);')
-    src.add('  switch (function_id) {')
+    src.add('void Dump::dump_one() {')
+    src.add('  switch (iter_.function_id()) {')
     src.add('  case FunctionId::Invalid:')
     src.add('    break;')
     for func in FUNCTIONS:
@@ -480,11 +488,12 @@ def gen_dump_cc():
             src.add('    break;')
             continue
         src.add('    {')
+        if func.params:
+            src.add('      {} fn;'.format(func.cxx_struct_name()))
+            src.add('      fn.read(iter_.file());')
         args = []
         placeholders = []
         for param in func.params:
-            src.add('      {} {};'.format(param.serialize_type(), param.name))
-            src.add('      deserialize->read(&{});'.format(param.name))
             args.append(param.name)
             placeholders.append(param.ptype.printf)
         src.add('      printf("{}({});\\n"{}{});'.format(
@@ -521,7 +530,7 @@ def main():
     gen_gl_functions_header().write(os.path.join(args.build_dir, 'pumpkintown_gl_functions.hh'))
     gen_gl_functions_source().write(os.path.join(args.build_dir, 'pumpkintown_gl_functions.cc'))
 
-    #gen_dump_cc().write(os.path.join(args.build_dir, 'pumpkintown_dump_gen.cc'))
+    gen_dump_cc().write(os.path.join(args.build_dir, 'pumpkintown_dump_gen.cc'))
     gen_replay_source().write(os.path.join(args.build_dir, 'pumpkintown_replay_gen.cc'))
 
 

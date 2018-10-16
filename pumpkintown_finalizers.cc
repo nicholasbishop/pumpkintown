@@ -36,4 +36,66 @@ void FnGlGenTextures::finalize() {
   textures_length = n * sizeof(*textures);
 }
 
+void FnGlLightfv::finalize() {
+  params_length = 0;
+  switch (pname) {
+    case GL_AMBIENT:
+      params_length = 4;
+      break;
+    case GL_DIFFUSE:
+      params_length = 4;
+      break;
+    case GL_SPECULAR:
+      params_length = 4;
+      break;
+    case GL_POSITION:
+      params_length = 4;
+      break;
+    case GL_SPOT_CUTOFF:
+      params_length = 1;
+      break;
+    case GL_SPOT_DIRECTION:
+      params_length = 3;
+      break;
+    case GL_SPOT_EXPONENT:
+      params_length = 1;
+      break;
+    case GL_CONSTANT_ATTENUATION:
+      params_length = 1;
+      break;
+    case GL_LINEAR_ATTENUATION:
+      params_length = 1;
+      break;
+    case GL_QUADRATIC_ATTENUATION:
+      params_length = 1;
+      break;
+  }
+}
+
+void FnGlMaterialfv::finalize() {
+  switch (pname) {
+    case GL_AMBIENT:
+      params_length = 4;
+      break;
+    case GL_DIFFUSE:
+      params_length = 4;
+      break;
+    case GL_SPECULAR:
+      params_length = 4;
+      break;
+    case GL_EMISSION:
+      params_length = 4;
+      break;
+    case GL_SHININESS:
+      params_length = 1;
+      break;
+    case GL_AMBIENT_AND_DIFFUSE:
+      params_length = 4;
+      break;
+    case GL_COLOR_INDEXES:
+      params_length = 3;
+      break;
+  }
+}
+
 }

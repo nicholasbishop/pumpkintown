@@ -3,6 +3,7 @@
 
 #include <map>
 
+#include "pumpkintown_function_structs.hh"
 #include "pumpkintown_io.hh"
 
 struct waffle_window;
@@ -21,12 +22,17 @@ class Replay {
 
   void bind_texture();
 
+  void custom_glGenLists(const FnGlGenLists& fn);
+  void custom_glNewList(const FnGlNewList& fn);
+  void custom_glCallList(const FnGlCallList& fn);
+
  private:
   void replay_one();
 
   TraceIterator iter_;
   waffle_window* waffle_window_;
   std::map<uint32_t, uint32_t> texture_ids_;
+  std::map<uint32_t, uint32_t> display_list_ids_;
 };
 
 }
