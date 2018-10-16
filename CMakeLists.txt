@@ -19,7 +19,7 @@ add_custom_command(
   pumpkintown_trace.cc
   pumpkintown_trace.hh
   COMMAND ${PROJECT_SOURCE_DIR}/gen2.py ${CMAKE_CURRENT_BINARY_DIR} ${PROJECT_SOURCE_DIR}
-  DEPENDS gen2.py parse_xml.py types.json overrides.json)
+  DEPENDS gen2.py pumpkinpy/parse_xml.py types.json overrides.json)
 
 add_library(pumpkintown
   SHARED
@@ -35,6 +35,7 @@ add_library(pumpkintown
 add_executable(pumpkintown_dump
   pumpkintown_dump.cc
   pumpkintown_dump_gen.cc
+  pumpkintown_function_structs.cc
   pumpkintown_io.cc)
 
 # TODO

@@ -8,7 +8,7 @@ import subprocess
 
 import attr
 
-import parse_xml
+from pumpkinpy import parse_xml
 
 
 @attr.s
@@ -475,7 +475,7 @@ def gen_dump_cc():
     src = Source()
     src.add_cxx_include('pumpkintown_dump.hh')
     src.add_cxx_include('cstdio', system=True)
-    src.add_cxx_include('pumpkintown_deserialize.hh')
+    src.add_cxx_include('pumpkintown_function_structs.hh')
     src.add_cxx_include('pumpkintown_function_id.hh')
     src.add('namespace pumpkintown {')
     src.add('void Dump::dump_one() {')
@@ -494,7 +494,7 @@ def gen_dump_cc():
         args = []
         placeholders = []
         for param in func.params:
-            args.append(param.name)
+            args.append('fn.{}'.format(param.name))
             placeholders.append(param.ptype.printf)
         src.add('      printf("{}({});\\n"{}{});'.format(
             func.name,
@@ -504,7 +504,6 @@ def gen_dump_cc():
         src.add('      break;')
         src.add('    }')
     src.add('  }')
-    src.add('  return true;')
     src.add('}')
     src.add('}')
     return src
