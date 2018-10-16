@@ -14,6 +14,7 @@ add_custom_command(
   pumpkintown_function_structs.cc
   pumpkintown_function_structs.hh
   pumpkintown_gl_enum.hh
+  pumpkintown_gl_enum.cc
   pumpkintown_gl_functions.cc
   pumpkintown_replay_gen.cc
   pumpkintown_trace.cc
@@ -35,6 +36,7 @@ add_library(pumpkintown
 add_executable(pumpkintown_dump
   pumpkintown_dump.cc
   pumpkintown_dump_gen.cc
+  pumpkintown_gl_enum.cc
   pumpkintown_function_structs.cc
   pumpkintown_io.cc)
 

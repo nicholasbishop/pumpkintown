@@ -79,6 +79,11 @@ class Param:
     def is_serializable(self):
         return self.ptype.stype or self.array
 
+    def array_element_printf(self):
+        return {'float': '%f',
+                'uint8_t': '%u',
+                'uint32_t': '%u'}[self.array]
+
 
 @attr.s
 class Function:
@@ -262,11 +267,41 @@ def gen_trace_source():
 
 def gen_gl_enum_header():
     src = Source()
-    src.add('enum FunctionId {')
+    src.add_cxx_include('cstdint', system=True)
     for name, value in ENUMS.items():
-        src.add('  {} = {},'.format(name, value))
-    src.add('};')
+        if value >= 0:
+            value = '0x{:x}'.format(value)
+        src.add('constexpr auto {} = {};'.format(name, value))
+    # TODO(nicholasbishop): should the enum be namespaced as well?
+    src.add('namespace pumpkintown {')
+    src.add('const char* lookup_gl_enum_string(int64_t val);')
+    src.add('}')
     src.add_guard('PUMPKINTOWN_GL_ENUM_HH_')
+    return src
+
+
+def gen_gl_enum_source():
+    enum_map = {}
+    for name, value in ENUMS.items():
+        if value in enum_map:
+            enum_map[value].append(name)
+        else:
+            enum_map[value] = [name]
+
+    src = Source()
+    src.add_cxx_include('pumpkintown_gl_enum.hh')
+    src.add('namespace pumpkintown {')
+    src.add('const char* lookup_gl_enum_string(const int64_t val) {')
+    src.add('  switch(val) {')
+    for value, names in enum_map.items():
+        if value >= 0:
+            value = '0x{:x}'.format(value)
+        src.add('  case {}:'.format(value))
+        src.add('    return "{}";'.format('/'.join(names)))
+    src.add('  }')
+    src.add('  return "unknown-GLenum";')
+    src.add('}')
+    src.add('}')
     return src
 
 
@@ -367,7 +402,7 @@ def gen_function_structs_source():
                 src.add('  if ({}_length > 0) {{'.format(param.name))
                 src.add('    {0}* {1}_tmp = new {0}[{1}_length];'.format(
                     param.array, param.name))
-                src.add('    read_exact(f, {0}_tmp, {0}_length);'.format(
+                src.add('    read_exact(f, {0}_tmp, {0}_length * sizeof(*{0}));'.format(
                     param.name))
                 src.add('    {0} = {0}_tmp;'.format(param.name))
                 src.add('  } else {')
@@ -378,7 +413,7 @@ def gen_function_structs_source():
         src.add('  write_exact(f, this, sizeof(*this));')
         for param in func.params:
             if param.array:
-                src.add('  write_exact(f, {0}, {0}_length);'.format(
+                src.add('  write_exact(f, {0}, {0}_length * sizeof(*{0}));'.format(
                     param.name))
         src.add('  fflush(f);')
         src.add('}')
@@ -472,9 +507,12 @@ def gen_replay_source():
 
 
 def gen_dump_cc():
+    # Yes, this is Python code that generates C++ code that generates
+    # C++ code. I'm sorry :(
     src = Source()
     src.add_cxx_include('pumpkintown_dump.hh')
     src.add_cxx_include('cstdio', system=True)
+    src.add_cxx_include('pumpkintown_gl_enum.hh')
     src.add_cxx_include('pumpkintown_function_structs.hh')
     src.add_cxx_include('pumpkintown_function_id.hh')
     src.add('namespace pumpkintown {')
@@ -493,14 +531,30 @@ def gen_dump_cc():
             src.add('      fn.read(iter_.file());')
         args = []
         placeholders = []
+        src.add('      printf("{\\n");')
         for param in func.params:
-            args.append('fn.{}'.format(param.name))
-            placeholders.append(param.ptype.printf)
-        src.add('      printf("{}({});\\n"{}{});'.format(
+            if param.array:
+                src.add('      printf("  const {} {}[] = {{\\n");'.format(
+                    param.array, param.name))
+                src.add('      for (uint64_t i = 0; i < fn.{}_length; i++) {{'.format(
+                    param.name))
+                src.add('        printf("    {},\\n", fn.{}[i]);'.format(
+                    param.array_element_printf(), param.name))
+                src.add('      }')
+                src.add('      printf("  }\\n");')
+                placeholders.append(param.name)
+            elif param.ptype.ctype == 'GLenum':
+                args.append('lookup_gl_enum_string(fn.{})'.format(param.name))
+                placeholders.append('%s')
+            else:
+                args.append('fn.{}'.format(param.name))
+                placeholders.append(param.ptype.printf)
+        src.add('      printf("  {}({});\\n"{}{});'.format(
             func.name,
             ', '.join(placeholders),
             ', ' if func.params else '',
             ', '.join(args)))
+        src.add('      printf("}\\n");')
         src.add('      break;')
         src.add('    }')
     src.add('  }')
@@ -526,6 +580,8 @@ def main():
     gen_function_structs_source().write(os.path.join(args.build_dir, 'pumpkintown_function_structs.cc'))
 
     gen_gl_enum_header().write(os.path.join(args.build_dir, 'pumpkintown_gl_enum.hh'))
+    gen_gl_enum_source().write(os.path.join(args.build_dir, 'pumpkintown_gl_enum.cc'))
+
     gen_gl_functions_header().write(os.path.join(args.build_dir, 'pumpkintown_gl_functions.hh'))
     gen_gl_functions_source().write(os.path.join(args.build_dir, 'pumpkintown_gl_functions.cc'))
 

@@ -65,4 +65,8 @@ def parse_xml(registry, name):
         value = node.get('value')
         name = node.get('name')
         if name and value and '"' not in value:
+            if value.startswith('0x'):
+                value = int(value, 16)
+            else:
+                value = int(value)
             registry.enums[name] = value
