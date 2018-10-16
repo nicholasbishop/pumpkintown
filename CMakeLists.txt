@@ -52,7 +52,9 @@ add_executable(pumpkintown_texture_dump
 
 add_executable(pumpkintown_replay
   pumpkintown_deserialize.cc
+  pumpkintown_finalizers.cc
   pumpkintown_function_structs.cc
+  pumpkintown_gl_enum.cc
   pumpkintown_gl_functions.cc
   pumpkintown_gl_util.cc
   pumpkintown_io.cc

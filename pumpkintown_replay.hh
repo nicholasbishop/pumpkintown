@@ -18,9 +18,19 @@ class Replay {
 
   void replay();
 
-  void gen_textures();
+  void custom_glGenBuffers(const FnGlGenBuffers& fn);
+  void custom_glBindBuffer(const FnGlBindBuffer& fn);
 
-  void bind_texture();
+  void custom_glGenTextures(const FnGlGenTextures& fn);
+  void custom_glBindTexture(const FnGlBindTexture& fn);
+
+  void custom_glGenFramebuffers(const FnGlGenFramebuffers& fn);
+  void custom_glBindFramebuffer(const FnGlBindFramebuffer& fn);
+
+  void custom_glGenVertexArrays(const FnGlGenVertexArrays& fn);
+  void custom_glBindVertexArray(const FnGlBindVertexArray& fn);
+
+  void custom_glFramebufferTexture2D(const FnGlFramebufferTexture2D& fn);
 
   void custom_glGenLists(const FnGlGenLists& fn);
   void custom_glNewList(const FnGlNewList& fn);
@@ -31,6 +41,9 @@ class Replay {
 
   TraceIterator iter_;
   waffle_window* waffle_window_;
+  std::map<uint32_t, uint32_t> buffer_ids_;
+  std::map<uint32_t, uint32_t> vertex_arrays_ids_;
+  std::map<uint32_t, uint32_t> framebuffer_ids_;
   std::map<uint32_t, uint32_t> texture_ids_;
   std::map<uint32_t, uint32_t> display_list_ids_;
 };

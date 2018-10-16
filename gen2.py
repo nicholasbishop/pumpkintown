@@ -69,18 +69,17 @@ class Param:
     ptype = attr.ib()
     name = attr.ib()
     array = attr.ib(default=None)
+    offset = attr.ib(default=None)
 
     def cxx(self):
         return '{} {}'.format(self.ptype.ctype, self.name)
 
-    def serialize_type(self):
-        return self.ptype.stype
-
     def is_serializable(self):
-        return self.ptype.stype or self.array
+        return self.ptype.stype or self.array or self.offset
 
     def array_element_printf(self):
         return {'float': '%f',
+                'int32_t': '%d',
                 'uint8_t': '%u',
                 'uint32_t': '%u'}[self.array]
 
@@ -91,6 +90,7 @@ class Function:
     return_type = attr.ib()
     params = attr.ib()
     custom_replay = attr.ib(default=False)
+    custom_io = attr.ib(default=False)
 
     def param(self, name):
         for param in self.params:
@@ -120,6 +120,8 @@ class Function:
         return 'Fn{}{}'.format(self.name[0].upper(), self.name[1:]).replace('_', '')
 
     def is_serializable(self):
+        if self.custom_io:
+            return True
         for param in self.params:
             if not param.is_serializable():
                 return False
@@ -186,7 +188,9 @@ def load_glinfo(args):
                     for param_name, overrides in val.get('params', {}).items():
                         param = func.param(param_name)
                         param.array = overrides.get('array')
+                        param.offset = overrides.get('offset')
                     func.custom_replay = val.get('custom_replay')
+                    func.custom_io = val.get('custom_io')
                     break
 
 
@@ -237,7 +241,7 @@ def gen_trace_source():
                         param.name, param.array))
                 else:
                     src.add('  fn.{0} = {0};'.format(param.name))
-            if func.has_array_params():
+            if func.has_array_params() and not func.custom_io:
                 src.add('  fn.finalize();')
             src.add('  pumpkintown::serialize()->write(fn.num_bytes());')
             src.add('  fn.write(pumpkintown::serialize()->file());')
@@ -343,6 +347,7 @@ def gen_function_structs_header():
     src = Source()
     src.add_cxx_include('cstdio', system=True)
     src.add_cxx_include('cstdint', system=True)
+    src.add_cxx_include('string', system=True)
     src.add('namespace pumpkintown {')
     for func in FUNCTIONS:
         if not func.is_serializable() or not func.params:
@@ -353,6 +358,7 @@ def gen_function_structs_header():
             src.add('  ~{}();'.format(func.cxx_struct_name()))
             src.add('  void finalize();')
         src.add('  uint64_t num_bytes() const;')
+        src.add('  std::string to_string() const;')
         src.add('  void read(FILE* f);')
         src.add('  void write(FILE* f);')
         if func.has_return() and func.return_type.stype:
@@ -361,6 +367,8 @@ def gen_function_structs_header():
             if param.array:
                 src.add('  uint64_t {}_length;'.format(param.name))
                 src.add('  const {}* {};'.format(param.array, param.name))
+            elif param.offset:
+                src.add('  {} {};'.format(param.offset, param.name))
             else:
                 src.add('  {} {};'.format(param.ptype.stype, param.name))
         src.add('};')
@@ -372,6 +380,7 @@ def gen_function_structs_header():
 def gen_function_structs_source():
     src = Source()
     src.add_cxx_include('pumpkintown_function_structs.hh')
+    src.add_cxx_include('pumpkintown_gl_enum.hh')
     src.add_cxx_include('pumpkintown_io.hh')
     src.add('namespace pumpkintown {')
     # TODO(nicholasbishop): currently the format is a little
@@ -381,6 +390,8 @@ def gen_function_structs_source():
     # TODO(nicholasbishop): byte order
     for func in FUNCTIONS:
         if not func.is_serializable() or not func.params:
+            continue
+        if func.custom_io:
             continue
         if func.has_array_params():
             src.add('{0}::~{0}() {{'.format(func.cxx_struct_name()))
@@ -394,6 +405,24 @@ def gen_function_structs_source():
             if param.array:
                 size_args.append('({0}_length * sizeof(*{0}))'.format(param.name))
         src.add('  return {};'.format(' + '.join(size_args)))
+        src.add('}')
+        src.add('std::string {}::to_string() const {{'.format(func.cxx_struct_name()))
+        src.add('  std::string result = "{}(";'.format(func.name))
+        first = True
+        for param in func.params:
+            if first:
+                first = False
+            else:
+                src.add('  result += ", ";')
+            if param.array:
+                pass
+            elif param.offset:
+                pass
+            elif param.ptype.ctype == 'GLenum':
+                src.add('  result += lookup_gl_enum_string({});'.format(param.name))
+            else:
+                src.add('  result += std::to_string({});'.format(param.name))
+        src.add('  return result + ")";'.format(func.name))
         src.add('}')
         src.add('void {}::read(FILE* f) {{'.format(func.cxx_struct_name()))
         src.add('  read_exact(f, this, sizeof(*this));')
@@ -477,14 +506,6 @@ def gen_replay_source():
             src.add('    waffle_window_swap_buffers(waffle_window_);')
             src.add('    break;')
             continue
-        elif func.name == 'glGenTextures':
-            src.add('    gen_textures();')
-            src.add('    break;')
-            continue
-        elif func.name == 'glBindTexture':
-            src.add('    bind_texture();')
-            src.add('    break;')
-            continue
         elif not func.is_serializable():
             src.add('    printf("stub\\n");')
             src.add('    break;')
@@ -493,6 +514,7 @@ def gen_replay_source():
         if func.params:
             src.add('      {} fn;'.format(func.cxx_struct_name()))
             src.add('      fn.read(iter_.file());')
+            src.add('      printf("%s\\n", fn.to_string().c_str());')
         if func.custom_replay:
             src.add('      custom_{}(fn);'.format(func.name))
         else:
@@ -523,6 +545,9 @@ def gen_dump_cc():
     for func in FUNCTIONS:
         src.add('  case FunctionId::{}:'.format(func.name))
         if not func.is_serializable():
+            src.add('    break;')
+            continue
+        if func.custom_io:
             src.add('    break;')
             continue
         src.add('    {')

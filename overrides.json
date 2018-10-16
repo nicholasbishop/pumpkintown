@@ -14,6 +14,45 @@
       }
     }
   },
+  "glGenFramebuffers": {
+    "custom_replay": true,
+    "params": {
+      "framebuffers": {
+        "array": "uint32_t"
+      }
+    }
+  },
+  "glGenVertexArrays": {
+    "custom_replay": true,
+    "params": {
+      "arrays": {
+        "array": "uint32_t"
+      }
+    }
+  },
+  "glGenBuffers": {
+    "custom_replay": true,
+    "params": {
+      "buffers": {
+        "array": "uint32_t"
+      }
+    }
+  },
+  "glBindVertexArray": {
+    "custom_replay": true
+  },
+  "glBindBuffers": {
+    "custom_replay": true
+  },
+  "glBindTexture": {
+    "custom_replay": true
+  },
+  "glBindFramebuffer": {
+    "custom_replay": true
+  },
+  "glFramebufferTexture2D": {
+    "custom_replay": true
+  },
   "glLightfv": {
     "params": {
       "params": {
@@ -28,6 +67,31 @@
       }
     }
   },
+  "glBufferData": {
+    "params": {
+      "data": {
+        "array": "uint8_t"
+      }
+    }
+  },
+  "glVertexAttrib4fv": {
+    "params": {
+      "v": {
+        "array": "float"
+      }
+    }
+  },
+  "glShaderSource": {
+    "custom_io": true,
+    "params": {
+      "string": {
+        "array": "char* const"
+      },
+      "length": {
+        "array": "int32_t"
+      }
+    }
+  },
   "glGenLists": {
     "custom_replay": true
   },
@@ -36,5 +100,12 @@
   },
   "glCallList": {
     "custom_replay": true
+  },
+  "glVertexAttribPointer": {
+    "params": {
+      "pointer": {
+        "offset": "const void*"
+      }
+    }
   }
 }
