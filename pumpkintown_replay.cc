@@ -60,11 +60,11 @@ Replay::Replay(const std::string& path)
   };
 
   const int32_t config_attrs[] = {
-    WAFFLE_CONTEXT_API,         WAFFLE_CONTEXT_OPENGL_ES2,
+    WAFFLE_CONTEXT_API,         WAFFLE_CONTEXT_OPENGL,
 
-#if 0
-    WAFFLE_CONTEXT_MAJOR_VERSION, 3,
-    WAFFLE_CONTEXT_MINOR_VERSION, 3,
+#if 1
+    WAFFLE_CONTEXT_MAJOR_VERSION, 4,
+    WAFFLE_CONTEXT_MINOR_VERSION, 5,
 
     //WAFFLE_CONTEXT_PROFILE,  WAFFLE_CONTEXT_COMPATIBILITY_PROFILE,
 #endif
@@ -141,8 +141,10 @@ void Replay::custom_glGenBuffers(const FnGlGenBuffers& fn) {
   std::vector<uint32_t> new_ids;
   new_ids.resize(fn.buffers_length);
   glGenBuffers(fn.buffers_length, new_ids.data());
+  fprintf(stderr, "BISH: %lu\n", fn.buffers_length);
 
   for (uint32_t i{0}; i < fn.buffers_length; i++) {
+    fprintf(stderr, "BISH: %d -> %d\n", fn.buffers[i], new_ids[i]);
     buffer_ids_[fn.buffers[i]] = new_ids[i];
   }
 }
@@ -151,6 +153,7 @@ void Replay::custom_glBindBuffer(const FnGlBindBuffer& fn) {
   if (fn.buffer != 0) {
     assert(buffer_ids_[fn.buffer] != 0);
   }
+  fprintf(stderr, "BISH2: %d -> %d\n", fn.buffer, buffer_ids_[fn.buffer]);
   glBindBuffer(fn.target, buffer_ids_[fn.buffer]);
 }
 

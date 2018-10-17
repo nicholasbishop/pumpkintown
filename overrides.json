@@ -56,7 +56,7 @@
   "glBindVertexArray": {
     "custom_replay": true
   },
-  "glBindBuffers": {
+  "glBindBuffer": {
     "custom_replay": true
   },
   "glBindTexture": {
