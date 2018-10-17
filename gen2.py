@@ -188,6 +188,7 @@ def load_glinfo(args):
         root = json.load(rfile)
 
         for key, val in root.items():
+            found = False
             for func in FUNCTIONS:
                 if func.name == key:
                     for param_name, overrides in val.get('params', {}).items():
@@ -196,7 +197,10 @@ def load_glinfo(args):
                         param.offset = overrides.get('offset')
                     func.custom_replay = val.get('custom_replay')
                     func.custom_io = val.get('custom_io')
+                    found = True
                     break
+            if not found:
+                raise KeyError('func not found: ' + key)
 
 
 def gen_exports():
