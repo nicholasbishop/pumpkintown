@@ -15,7 +15,7 @@
 #include "pumpkintown_gl_functions.hh"
 #include "pumpkintown_gl_types.hh"
 #include "pumpkintown_io.hh"
-
+#include <unistd.h>
 namespace pumpkintown {
 
 namespace {
@@ -79,7 +79,7 @@ Replay::Replay(const std::string& path)
     WAFFLE_STENCIL_SIZE, 1,
 
          
-    WAFFLE_DOUBLE_BUFFERED, true,
+    WAFFLE_DOUBLE_BUFFERED, false,
 
     //WAFFLE_CONTEXT_DEBUG, true,
 
@@ -102,9 +102,10 @@ Replay::Replay(const std::string& path)
   waffle_window_show(window_);
   waffle_make_current(display_, window_, default_context_);
 
-  glClearColor(1, 0, 0, 1);
+  glClearColor(0.4, 0, 0, 1);
   glClear(GL_COLOR_BUFFER_BIT);
-  waffle_window_swap_buffers(window_);
+  sleep(1);
+  //waffle_window_swap_buffers(window_);
 }
 
 void Replay::replay() {
