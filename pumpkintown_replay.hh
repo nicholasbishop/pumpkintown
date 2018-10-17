@@ -29,6 +29,8 @@ class Replay {
   void custom_glXMakeCurrent(const FnGlXMakeCurrent& fn);
 
   void custom_glCreateProgram(const FnGlCreateProgram& fn);
+  void custom_glCreateShader(const FnGlCreateShader& fn);
+  void custom_glAttachShader(const FnGlAttachShader& fn);
 
   void custom_glGenBuffers(const FnGlGenBuffers& fn);
   void custom_glBindBuffer(const FnGlBindBuffer& fn);
@@ -63,6 +65,7 @@ class Replay {
   waffle_display* display_{nullptr};
   waffle_context* default_context_{nullptr};
   std::map<const void*, waffle_context*> contexts_;
+  std::map<uint32_t, uint32_t> shader_ids_;
   std::map<uint32_t, uint32_t> program_ids_;
   std::map<uint32_t, uint32_t> buffer_ids_;
   std::map<uint32_t, uint32_t> vertex_arrays_ids_;

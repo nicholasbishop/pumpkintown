@@ -146,6 +146,15 @@ void Replay::custom_glCreateProgram(const FnGlCreateProgram& fn) {
   program_ids_[fn.return_value] = new_id;
 }
 
+void Replay::custom_glCreateShader(const FnGlCreateShader& fn) {
+  const uint32_t new_id{glCreateShader(fn.type)};
+  shader_ids_[fn.return_value] = new_id;
+}
+
+void Replay::custom_glAttachShader(const FnGlAttachShader& fn) {
+  glAttachShader(program_ids_[fn.program], shader_ids_[fn.shader]);
+}
+
 void Replay::custom_glGenBuffers(const FnGlGenBuffers& fn) {
   std::vector<uint32_t> new_ids;
   new_ids.resize(fn.buffers_length);

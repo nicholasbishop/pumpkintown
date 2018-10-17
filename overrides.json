@@ -196,5 +196,11 @@
   },
   "glCreateProgram": {
     "custom_replay": true
+  },
+  "glCreateShader": {
+    "custom_replay": true
+  },
+  "glAttachShader": {
+    "custom_replay": true
   }
 }
