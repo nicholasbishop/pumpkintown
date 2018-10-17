@@ -37,6 +37,7 @@ class Replay {
 
   void custom_glGenTextures(const FnGlGenTextures& fn);
   void custom_glBindTexture(const FnGlBindTexture& fn);
+  void custom_glDeleteTextures(const FnGlDeleteTextures& fn);
 
   void custom_glGenFramebuffers(const FnGlGenFramebuffers& fn);
   void custom_glBindFramebuffer(const FnGlBindFramebuffer& fn);

@@ -53,6 +53,10 @@ void FnGlGenTextures::finalize() {
   textures_length = n;
 }
 
+void FnGlDeleteTextures::finalize() {
+  textures_length = n;
+}
+
 void FnGlGenVertexArrays::finalize() {
   arrays_length = n;
 }
@@ -66,7 +70,11 @@ void FnGlGenRenderbuffers::finalize() {
 }
 
 void FnGlBufferData::finalize() {
-  data_length = size;
+  if (data) {
+    data_length = size;
+  } else {
+    data_length = 0;
+  }
 }
 
 void FnGlVertexAttrib4fv::finalize() {

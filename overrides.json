@@ -21,6 +21,14 @@
       }
     }
   },
+  "glDeleteTextures": {
+    "custom_replay": true,
+    "params": {
+      "textures": {
+        "array": "uint32_t"
+      }
+    }
+  },
   "glGenFramebuffers": {
     "custom_replay": true,
     "params": {

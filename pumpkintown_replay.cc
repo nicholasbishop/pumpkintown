@@ -122,15 +122,21 @@ void Replay::replay() {
 }
 
 void Replay::custom_glXCreateContext(const FnGlXCreateContext& fn) {
-  contexts_[fn.return_value] = waffle_context_create(config_, nullptr);
+  waffle_context* ctx = waffle_context_create(config_, nullptr);
+  assert(ctx);
+  contexts_[fn.return_value] = ctx;
 }
 
 void Replay::custom_glXCreateContextAttribsARB(const FnGlXCreateContextAttribsARB& fn) {
-  contexts_[fn.return_value] = waffle_context_create(config_, nullptr);
+  waffle_context* ctx = waffle_context_create(config_, nullptr);
+  assert(ctx);
+  contexts_[fn.return_value] = ctx;
 }
 
 void Replay::custom_glXCreateNewContext(const FnGlXCreateNewContext& fn) {
-  contexts_[fn.return_value] = waffle_context_create(config_, nullptr);
+  waffle_context* ctx = waffle_context_create(config_, nullptr);
+  assert(ctx);
+  contexts_[fn.return_value] = ctx;
 }
 
 void Replay::custom_glXMakeContextCurrent(const FnGlXMakeContextCurrent& fn) {
@@ -187,6 +193,13 @@ void Replay::custom_glGenTextures(const FnGlGenTextures& fn) {
 
 void Replay::custom_glBindTexture(const FnGlBindTexture& fn) {
   glBindTexture(fn.target, texture_ids_[fn.texture]);
+}
+
+void Replay::custom_glDeleteTextures(const FnGlDeleteTextures& fn) {
+  glDeleteTextures(fn.textures_length, fn.textures);
+  for (uint32_t i{0}; i < fn.textures_length; i++) {
+    texture_ids_.erase(fn.textures[i]);
+  }
 }
 
 void Replay::custom_glGenFramebuffers(const FnGlGenFramebuffers& fn) {
