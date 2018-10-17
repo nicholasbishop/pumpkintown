@@ -120,7 +120,7 @@ class Function:
         return 'Fn{}{}'.format(self.name[0].upper(), self.name[1:])
 
     def is_replayable(self):
-        if self.custom_io:
+        if self.custom_io or self.custom_replay:
             return True
         for param in self.params:
             if not param.is_replayable():
@@ -227,7 +227,7 @@ def gen_trace_source():
     for func in FUNCTIONS:
         src.add('{} {{'.format(func.cxx_decl()))
         src.add('  ' + func.cxx_function_type_alias())
-        if True:
+        if False:
             src.add('  fprintf(stderr, "{}\\n");'.format(func.name))
         # Static function pointer to the "real" call
         src.add('  static Fn real_fn = reinterpret_cast<Fn>(get_real_proc_addr("{}"));'.format(func.name))
@@ -515,7 +515,7 @@ def gen_replay_source():
         src.add('  case FunctionId::{}:'.format(func.name))
         src.add('    printf("{}\\n");'.format(func.name))
         if func.name == 'glXSwapBuffers':
-            src.add('    waffle_window_swap_buffers(waffle_window_);')
+            src.add('    waffle_window_swap_buffers(window_);')
             src.add('    break;')
             continue
         elif not func.is_replayable():

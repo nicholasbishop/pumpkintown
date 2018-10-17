@@ -48,11 +48,55 @@ void check_gl_error() {
 
 }
 
-Replay::Replay(const std::string& path, waffle_window* waffle_window)
-    : iter_{path}, waffle_window_{waffle_window} {
+Replay::Replay(const std::string& path)
+    : iter_{path} {
   texture_ids_[0] = 0;
   framebuffer_ids_[0] = 0;
   vertex_arrays_ids_[0] = 0;
+
+  const int32_t init_attrs[] = {
+    WAFFLE_PLATFORM, WAFFLE_PLATFORM_GLX,
+    0,
+  };
+
+  const int32_t config_attrs[] = {
+    WAFFLE_CONTEXT_API,         WAFFLE_CONTEXT_OPENGL,
+
+#if 0
+    WAFFLE_CONTEXT_MAJOR_VERSION, 3,
+    WAFFLE_CONTEXT_MINOR_VERSION, 3,
+
+    WAFFLE_CONTEXT_PROFILE,  WAFFLE_CONTEXT_COMPATIBILITY_PROFILE,
+#endif
+
+    WAFFLE_RED_SIZE,            8,
+    WAFFLE_BLUE_SIZE,           8,
+    WAFFLE_GREEN_SIZE,          8,
+
+    WAFFLE_DEPTH_SIZE, 24,
+
+    WAFFLE_STENCIL_SIZE, 1,
+
+         
+    WAFFLE_DOUBLE_BUFFERED, true,
+
+    WAFFLE_CONTEXT_DEBUG, true,
+
+    0,
+  };
+
+  const int32_t window_width = 800;
+  const int32_t window_height = 600;
+
+  waffle_init(init_attrs);
+  display_ = waffle_display_connect(NULL);
+
+  config_ = waffle_config_choose(display_, config_attrs);
+  window_ = waffle_window_create(config_, window_width, window_height);
+  default_context_ = waffle_context_create(config_, NULL);
+
+  waffle_window_show(window_);
+  waffle_make_current(display_, window_, default_context_);
 }
 
 void Replay::replay() {
@@ -62,6 +106,26 @@ void Replay::replay() {
 
     check_gl_error();
   }
+}
+
+void Replay::custom_glXCreateContext(const FnGlXCreateContext& fn) {
+  contexts_[fn.return_value] = waffle_context_create(config_, nullptr);
+}
+
+void Replay::custom_glXCreateContextAttribsARB(const FnGlXCreateContextAttribsARB& fn) {
+  contexts_[fn.return_value] = waffle_context_create(config_, nullptr);
+}
+
+void Replay::custom_glXCreateNewContext(const FnGlXCreateNewContext& fn) {
+  contexts_[fn.return_value] = waffle_context_create(config_, nullptr);
+}
+
+void Replay::custom_glXMakeContextCurrent(const FnGlXMakeContextCurrent& fn) {
+  waffle_make_current(display_, window_, contexts_[fn.ctx]);
+}
+
+void Replay::custom_glXMakeCurrent(const FnGlXMakeCurrent& fn) {
+  waffle_make_current(display_, window_, contexts_[fn.ctx]);
 }
 
 void Replay::custom_glGenBuffers(const FnGlGenBuffers& fn) {
@@ -198,66 +262,17 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  struct waffle_display *dpy;
-  struct waffle_config *config;
-  struct waffle_window *window;
-  struct waffle_context *ctx;
-
-  const int32_t init_attrs[] = {
-    WAFFLE_PLATFORM, WAFFLE_PLATFORM_GLX,
-    0,
-  };
-
-  const int32_t config_attrs[] = {
-    WAFFLE_CONTEXT_API,         WAFFLE_CONTEXT_OPENGL,
-
-#if 0
-    WAFFLE_CONTEXT_MAJOR_VERSION, 3,
-    WAFFLE_CONTEXT_MINOR_VERSION, 3,
-
-    WAFFLE_CONTEXT_PROFILE,  WAFFLE_CONTEXT_COMPATIBILITY_PROFILE,
-#endif
-
-    WAFFLE_RED_SIZE,            8,
-    WAFFLE_BLUE_SIZE,           8,
-    WAFFLE_GREEN_SIZE,          8,
-
-    WAFFLE_DEPTH_SIZE, 24,
-
-    WAFFLE_STENCIL_SIZE, 1,
-
-         
-    WAFFLE_DOUBLE_BUFFERED, false,
-
-    WAFFLE_CONTEXT_DEBUG, true,
-
-    0,
-  };
-
-  const int32_t window_width = 800;
-  const int32_t window_height = 600;
-
-  waffle_init(init_attrs);
-  dpy = waffle_display_connect(NULL);
-
-  config = waffle_config_choose(dpy, config_attrs);
-  window = waffle_window_create(config, window_width, window_height);
-  ctx = waffle_context_create(config, NULL);
-
-  waffle_window_show(window);
-  waffle_make_current(dpy, window, ctx);
-
-  pumpkintown::Replay replay(argv[1], window);
+  pumpkintown::Replay replay(argv[1]);
   replay.replay();
 
   //waffle_window_swap_buffers(window);
 
   // Clean up.
-  waffle_make_current(dpy, NULL, NULL);
-  waffle_window_destroy(window);
-  waffle_context_destroy(ctx);
-  waffle_config_destroy(config);
-  waffle_display_disconnect(dpy);
+  // waffle_make_current(dpy, NULL, NULL);
+  // waffle_window_destroy(window);
+  // //waffle_context_destroy(ctx);
+  // waffle_config_destroy(config);
+  // waffle_display_disconnect(dpy);
 
   waffle_teardown();
 

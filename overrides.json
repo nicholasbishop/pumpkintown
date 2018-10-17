@@ -127,5 +127,20 @@
         "offset": "const void*"
       }
     }
+  },
+  "glXCreateContext": {
+    "custom_replay": true
+  },
+  "glXCreateNewContext": {
+    "custom_replay": true
+  },
+  "glXCreateContextAttribsARB": {
+    "custom_replay": true
+  },
+  "glXMakeContextCurrent": {
+    "custom_replay": true
+  },
+  "glXMakeCurrent": {
+    "custom_replay": true
   }
 }

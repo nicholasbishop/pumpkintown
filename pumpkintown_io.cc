@@ -1,5 +1,6 @@
 #include "pumpkintown_io.hh"
 
+#include <sstream>
 #include <stdexcept>
 
 namespace pumpkintown {
@@ -28,6 +29,12 @@ void write_exact(FILE* f, const void* src, const uint64_t num_bytes) {
     bytes_remaining -= bytes_written;
     buf += bytes_written;
   }
+}
+
+std::string to_string(const void* ptr) {
+  std::ostringstream oss;
+  oss << ptr;
+  return oss.str();
 }
 
 TraceIterator::TraceIterator(const std::string& path) {

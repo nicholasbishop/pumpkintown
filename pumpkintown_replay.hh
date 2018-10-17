@@ -2,10 +2,14 @@
 #define PUMPKINTOWN_REPLAY_HH_
 
 #include <map>
+#include <vector>
 
 #include "pumpkintown_function_structs.hh"
 #include "pumpkintown_io.hh"
 
+struct waffle_config;
+struct waffle_context;
+struct waffle_display;
 struct waffle_window;
 
 namespace pumpkintown {
@@ -14,9 +18,15 @@ class Deserialize;
 
 class Replay {
  public:
-  Replay(const std::string& path, waffle_window* waffle_window);
+  explicit Replay(const std::string& path);
 
   void replay();
+
+  void custom_glXCreateContext(const FnGlXCreateContext& fn);
+  void custom_glXCreateContextAttribsARB(const FnGlXCreateContextAttribsARB& fn);
+  void custom_glXCreateNewContext(const FnGlXCreateNewContext& fn);
+  void custom_glXMakeContextCurrent(const FnGlXMakeContextCurrent& fn);
+  void custom_glXMakeCurrent(const FnGlXMakeCurrent& fn);
 
   void custom_glGenBuffers(const FnGlGenBuffers& fn);
   void custom_glBindBuffer(const FnGlBindBuffer& fn);
@@ -43,7 +53,11 @@ class Replay {
   void replay_one();
 
   TraceIterator iter_;
-  waffle_window* waffle_window_;
+  waffle_window* window_{nullptr};
+  waffle_config* config_{nullptr};
+  waffle_display* display_{nullptr};
+  waffle_context* default_context_{nullptr};
+  std::map<const void*, waffle_context*> contexts_;
   std::map<uint32_t, uint32_t> buffer_ids_;
   std::map<uint32_t, uint32_t> vertex_arrays_ids_;
   std::map<uint32_t, uint32_t> framebuffer_ids_;
