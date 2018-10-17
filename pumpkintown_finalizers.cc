@@ -196,6 +196,7 @@ uint64_t FnGlShaderSource::num_bytes() const {
 
 std::string FnGlShaderSource::to_string() const {
   std::string result = "glShaderSource:\n";
+  result += "shader: " + std::to_string(shader) + "\n";
   for (int32_t i{0}; i < count; i++) {
     result += "source " + std::to_string(i) + ":\n";
     result += string[i];
