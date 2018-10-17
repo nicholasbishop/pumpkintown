@@ -45,6 +45,14 @@
       }
     }
   },
+  "glGenRenderbuffers": {
+    "custom_replay": true,
+    "params": {
+      "renderbuffers": {
+        "array": "uint32_t"
+      }
+    }
+  },
   "glBindVertexArray": {
     "custom_replay": true
   },
@@ -128,6 +136,14 @@
       }
     }
   },
+  "glDrawElements": {
+    "comment": "TODO(nicholasbishop): this can really be either an array or an offset",
+    "params": {
+      "indices": {
+        "offset": "const void*"
+      }
+    }
+  },
   "glXCreateContext": {
     "custom_replay": true
   },
@@ -142,5 +158,40 @@
   },
   "glXMakeCurrent": {
     "custom_replay": true
+  },
+  "glUniform1iv": {
+    "params": {
+      "value": {
+        "array": "int32_t"
+      }
+    }
+  },
+  "glUniform1fv": {
+    "params": {
+      "value": {
+        "array": "float"
+      }
+    }
+  },
+  "glUniform2fv": {
+    "params": {
+      "value": {
+        "array": "float"
+      }
+    }
+  },
+  "glUniform4fv": {
+    "params": {
+      "value": {
+        "array": "float"
+      }
+    }
+  },
+  "glUniformMatrix4fv": {
+    "params": {
+      "value": {
+        "array": "float"
+      }
+    }
   }
 }

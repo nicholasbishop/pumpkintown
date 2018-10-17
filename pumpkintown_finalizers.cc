@@ -61,6 +61,10 @@ void FnGlGenBuffers::finalize() {
   buffers_length = n;
 }
 
+void FnGlGenRenderbuffers::finalize() {
+  renderbuffers_length = n;
+}
+
 void FnGlBufferData::finalize() {
   data_length = size;
 }
@@ -71,6 +75,26 @@ void FnGlVertexAttrib4fv::finalize() {
 
 void FnGlProgramBinary::finalize() {
   binary_length = length;
+}
+
+void FnGlUniform1iv::finalize() {
+  value_length = 1;
+}
+
+void FnGlUniform1fv::finalize() {
+  value_length = 1;
+}
+
+void FnGlUniform2fv::finalize() {
+  value_length = 2;
+}
+
+void FnGlUniform4fv::finalize() {
+  value_length = 4;
+}
+
+void FnGlUniformMatrix4fv::finalize() {
+  value_length = 16;
 }
 
 void FnGlLightfv::finalize() {

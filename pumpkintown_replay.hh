@@ -40,6 +40,9 @@ class Replay {
   void custom_glGenVertexArrays(const FnGlGenVertexArrays& fn);
   void custom_glBindVertexArray(const FnGlBindVertexArray& fn);
 
+  void custom_glGenRenderbuffers(const FnGlGenRenderbuffers& fn);
+  void custom_glBindRenderbuffer(const FnGlBindRenderbuffer& fn);
+
   void custom_glFramebufferTexture2D(const FnGlFramebufferTexture2D& fn);
 
   void custom_glGenLists(const FnGlGenLists& fn);
@@ -63,6 +66,7 @@ class Replay {
   std::map<uint32_t, uint32_t> framebuffer_ids_;
   std::map<uint32_t, uint32_t> texture_ids_;
   std::map<uint32_t, uint32_t> display_list_ids_;
+  std::map<uint32_t, uint32_t> renderbuffer_ids_;
 };
 
 }

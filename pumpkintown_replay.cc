@@ -60,18 +60,19 @@ Replay::Replay(const std::string& path)
   };
 
   const int32_t config_attrs[] = {
-    WAFFLE_CONTEXT_API,         WAFFLE_CONTEXT_OPENGL,
+    WAFFLE_CONTEXT_API,         WAFFLE_CONTEXT_OPENGL_ES2,
 
 #if 0
     WAFFLE_CONTEXT_MAJOR_VERSION, 3,
     WAFFLE_CONTEXT_MINOR_VERSION, 3,
 
-    WAFFLE_CONTEXT_PROFILE,  WAFFLE_CONTEXT_COMPATIBILITY_PROFILE,
+    //WAFFLE_CONTEXT_PROFILE,  WAFFLE_CONTEXT_COMPATIBILITY_PROFILE,
 #endif
 
     WAFFLE_RED_SIZE,            8,
     WAFFLE_BLUE_SIZE,           8,
     WAFFLE_GREEN_SIZE,          8,
+    WAFFLE_ALPHA_SIZE,          8,
 
     WAFFLE_DEPTH_SIZE, 24,
 
@@ -80,7 +81,7 @@ Replay::Replay(const std::string& path)
          
     WAFFLE_DOUBLE_BUFFERED, true,
 
-    WAFFLE_CONTEXT_DEBUG, true,
+    //WAFFLE_CONTEXT_DEBUG, true,
 
     0,
   };
@@ -92,11 +93,18 @@ Replay::Replay(const std::string& path)
   display_ = waffle_display_connect(NULL);
 
   config_ = waffle_config_choose(display_, config_attrs);
+  assert(config_);
   window_ = waffle_window_create(config_, window_width, window_height);
+  assert(window_);
   default_context_ = waffle_context_create(config_, NULL);
+  assert(default_context_);
 
   waffle_window_show(window_);
   waffle_make_current(display_, window_, default_context_);
+
+  glClearColor(1, 0, 0, 1);
+  glClear(GL_COLOR_BUFFER_BIT);
+  waffle_window_swap_buffers(window_);
 }
 
 void Replay::replay() {
@@ -185,6 +193,20 @@ void Replay::custom_glGenVertexArrays(const FnGlGenVertexArrays& fn) {
 
 void Replay::custom_glBindVertexArray(const FnGlBindVertexArray& fn) {
   glBindVertexArray(vertex_arrays_ids_[fn.array]);
+}
+
+void Replay::custom_glGenRenderbuffers(const FnGlGenRenderbuffers& fn) {
+  std::vector<uint32_t> new_ids;
+  new_ids.resize(fn.renderbuffers_length);
+  glGenRenderbuffers(fn.renderbuffers_length, new_ids.data());
+
+  for (uint32_t i{0}; i < fn.renderbuffers_length; i++) {
+    renderbuffer_ids_[fn.renderbuffers[i]] = new_ids[i];
+  }
+}
+
+void Replay::custom_glBindRenderbuffer(const FnGlBindRenderbuffer& fn) {
+  glBindRenderbuffer(fn.target, renderbuffer_ids_[fn.renderbuffer]);
 }
 
 void Replay::custom_glFramebufferTexture2D(const FnGlFramebufferTexture2D& fn) {
