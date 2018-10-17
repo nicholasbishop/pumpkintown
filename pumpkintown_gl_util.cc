@@ -9,6 +9,7 @@ namespace pumpkintown {
 
 uint64_t gl_texture_format_num_components(const GLenum type) {
   switch (type) {
+    case GL_ALPHA:
     case GL_RED:
       return 1;
     case GL_RGB:
