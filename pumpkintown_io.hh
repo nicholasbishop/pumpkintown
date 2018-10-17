@@ -12,6 +12,13 @@ namespace pumpkintown {
 void read_exact(FILE* f, void* dst, uint64_t num_bytes);
 void write_exact(FILE* f, const void* src, uint64_t num_bytes);
 
+std::string to_string(const void* ptr);
+
+template<typename T>
+std::string to_string(const T& t) {
+  return std::to_string(t);
+}
+
 class TraceIterator {
  public:
   explicit TraceIterator(const std::string& path);

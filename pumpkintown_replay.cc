@@ -211,8 +211,12 @@ int main(int argc, char** argv) {
   const int32_t config_attrs[] = {
     WAFFLE_CONTEXT_API,         WAFFLE_CONTEXT_OPENGL,
 
+#if 0
     WAFFLE_CONTEXT_MAJOR_VERSION, 3,
     WAFFLE_CONTEXT_MINOR_VERSION, 3,
+
+    WAFFLE_CONTEXT_PROFILE,  WAFFLE_CONTEXT_COMPATIBILITY_PROFILE,
+#endif
 
     WAFFLE_RED_SIZE,            8,
     WAFFLE_BLUE_SIZE,           8,

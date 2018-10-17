@@ -20,7 +20,8 @@
     "printf": "%d"
   },
   {
-    "c": "GLchar"
+    "c": "GLchar",
+    "serialize": "int8_t"
   },
   {
     "c": "GLclampf",
@@ -83,138 +84,186 @@
     "printf": "%lu"
   },
   {
-    "c": "int"
+    "c": "GLsizeiptrARB",
+    "serialize": "uint64_t",
+    "printf": "%lu"
   },
   {
-    "c": "GLXFBConfig"
+    "c": "GLuint64EXT",
+    "serialize": "uint64_t",
+    "printf": "%lu"
   },
   {
-    "c": "void **"
+    "c": "int",
+    "serialize": "int32_t"
   },
   {
-    "c": "GLubyte"
+    "c": "GLXFBConfig",
+    "serialize": "const void*"
+  },
+  {
+    "c": "void **",
+    "serialize": "const void*"
+  },
+  {
+    "c": "GLubyte",
+    "serialize": "uint8_t"
   },
   {
     "c": "void"
   },
   {
-    "c": "const void *const*"
+    "c": "const void *const*",
+    "serialize": "const void*"
   },
   {
-    "c": "int64_t"
+    "c": "int64_t",
+    "serialize": "int64_t"
   },
   {
-    "c": "unsigned long"
+    "c": "unsigned long",
+    "serialize": "uint32_t"
   },
   {
-    "c": "GLintptr"
+    "c": "GLintptr",
+    "serialize": "int64_t",
+    "printf": "%l"
   },
   {
-    "c": "GLushort"
+    "c": "GLintptrARB",
+    "serialize": "int64_t",
+    "printf": "%l"
   },
   {
-    "c": "Display *"
+    "c": "GLushort",
+    "serialize": "uint16_t"
   },
   {
-    "c": "GLXContext"
+    "c": "Display *",
+    "serialize": "const void*"
   },
   {
-    "c": "GLXDrawable"
+    "c": "GLXContext",
+    "serialize": "const void*"
   },
   {
-    "c": "XVisualInfo *"
+    "c": "GLXDrawable",
+    "serialize": "const void*"
   },
   {
-    "c": "const GLchar *const*"
+    "c": "XVisualInfo *",
+    "serialize": "const void*"
   },
   {
-    "c": "GLuint64EXT"
+    "c": "const GLchar *const*",
+    "serialize": "const void*"
   },
   {
-    "c": "unsigned int"
+    "c": "unsigned int",
+    "serialize": "uint32_t"
   },
   {
-    "c": "GLDEBUGPROC"
+    "c": "GLDEBUGPROC",
+    "serialize": "const void*"
   },
   {
-    "c": "GLDEBUGPROCARB"
+    "c": "GLDEBUGPROCARB",
+    "serialize": "const void*"
   },
   {
-    "c": "char"
+    "c": "char",
+    "serialize": "uint8_t"
   },
   {
-    "c": "GLcharARB"
+    "c": "GLcharARB",
+    "serialize": "int8_t"
   },
   {
-    "c": "GLintptrARB"
+    "c": "GLsync",
+    "serialize": "const void*"
   },
   {
-    "c": "GLsizeiptrARB"
+    "c": "GLint64",
+    "serialize": "int64_t"
   },
   {
-    "c": "GLsync"
+    "c": "GLclampd",
+    "serialize": "double"
   },
   {
-    "c": "GLint64"
+    "c": "GLXPbuffer",
+    "serialize": "const void*"
   },
   {
-    "c": "GLclampd"
+    "c": "GLXWindow",
+    "serialize": "const void*"
   },
   {
-    "c": "GLXPbuffer"
+    "c": "Window",
+    "serialize": "const void*"
   },
   {
-    "c": "GLXWindow"
+    "c": "Pixmap",
+    "serialize": "const void*"
   },
   {
-    "c": "Window"
+    "c": "GLXPixmap",
+    "serialize": "const void*"
   },
   {
-    "c": "Pixmap"
+    "c": "GLXContext",
+    "serialize": "const void*"
   },
   {
-    "c": "GLXPixmap"
+    "c": "GLXContextID",
+    "serialize": "const void*"
   },
   {
-    "c": "GLXContext"
+    "c": "int32_t",
+    "serialize": "int32_t"
   },
   {
-    "c": "GLXContextID"
+    "c": "GLXFBConfigSGIX",
+    "serialize": "const void*"
   },
   {
-    "c": "int32_t"
+    "c": "GLXPbufferSGIX",
+    "serialize": "const void*"
   },
   {
-    "c": "GLXFBConfigSGIX"
+    "c": "GLvdpauSurfaceNV",
+    "serialize": "const void*"
   },
   {
-    "c": "GLXPbufferSGIX"
+    "c": "Font",
+    "serialize": "const void*"
   },
   {
-    "c": "GLvdpauSurfaceNV"
+    "c": "GLDEBUGPROCKHR",
+    "serialize": "const void*"
   },
   {
-    "c": "Font"
+    "c": "GLeglImageOES",
+    "serialize": "const void*"
   },
   {
-    "c": "GLDEBUGPROCKHR"
+    "c": "GLeglClientBufferEXT",
+    "serialize": "const void*"
   },
   {
-    "c": "GLeglImageOES"
+    "c": "GLhalfNV",
+    "serialize": "uint16_t"
   },
   {
-    "c": "GLeglClientBufferEXT"
+    "c": "GLclampx",
+    "serialize": "int32_t"
   },
   {
-    "c": "GLhalfNV"
+    "c": "GLint64EXT",
+    "serialize": "int64_t"
   },
   {
-    "c": "GLclampx"
-  },
-  {
-    "c": "GLint64EXT"
-  },
-  {
-    "c": "float"
+    "c": "float",
+    "serialize": "float"
   }
 ]

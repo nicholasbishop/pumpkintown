@@ -179,7 +179,7 @@ std::string FnGlShaderSource::to_string() const {
   return result;
 }
 
-void FnGlShaderSource::read(FILE* f) {
+void FnGlShaderSource::read_from_file(FILE* f) {
   read_exact(f, this, sizeof(*this));
   if (count > 0) {
     auto length_tmp = new int32_t[count];
@@ -198,7 +198,7 @@ void FnGlShaderSource::read(FILE* f) {
   }
 }
 
-void FnGlShaderSource::write(FILE* f) {
+void FnGlShaderSource::write_from_file(FILE* f) {
   write_exact(f, this, sizeof(*this));
 
   const auto real_lengths{gl_shader_source_lengths(count, length, string)};

@@ -8,7 +8,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_custom_command(
   OUTPUT
-  pumpkintown_dump_gen.cc
+  #pumpkintown_dump_gen.cc
   pumpkintown_function_id.hh
   pumpkintown_function_name.cc
   pumpkintown_function_structs.cc
@@ -33,12 +33,12 @@ add_library(pumpkintown
   pumpkintown_serialize.cc
   pumpkintown_trace.cc)
 
-add_executable(pumpkintown_dump
-  pumpkintown_dump.cc
-  pumpkintown_dump_gen.cc
-  pumpkintown_gl_enum.cc
-  pumpkintown_function_structs.cc
-  pumpkintown_io.cc)
+# add_executable(pumpkintown_dump
+#   pumpkintown_dump.cc
+#   pumpkintown_dump_gen.cc
+#   pumpkintown_gl_enum.cc
+#   pumpkintown_function_structs.cc
+#   pumpkintown_io.cc)
 
 # TODO
 include_directories(/usr/local/include/waffle-1)

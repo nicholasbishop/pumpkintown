@@ -74,8 +74,8 @@ class Param:
     def cxx(self):
         return '{} {}'.format(self.ptype.ctype, self.name)
 
-    def is_serializable(self):
-        return self.ptype.stype or self.array or self.offset
+    def is_replayable(self):
+        return self.ptype.stype != 'const void*' or self.array or self.offset
 
     def array_element_printf(self):
         return {'float': '%f',
@@ -117,13 +117,13 @@ class Function:
         return ', '.join(param.name for param in self.params)
 
     def cxx_struct_name(self):
-        return 'Fn{}{}'.format(self.name[0].upper(), self.name[1:]).replace('_', '')
+        return 'Fn{}{}'.format(self.name[0].upper(), self.name[1:])
 
-    def is_serializable(self):
+    def is_replayable(self):
         if self.custom_io:
             return True
         for param in self.params:
-            if not param.is_serializable():
+            if not param.is_replayable():
                 return False
         return True
 
@@ -132,6 +132,9 @@ class Function:
             if param.array:
                 return True
         return False
+
+    def is_empty(self):
+        return not self.params and not self.has_return()
 
 
 FUNCTIONS = []
@@ -153,13 +156,15 @@ def load_glinfo(args):
             types[ctype] = Type(ctype, stype, printf)
 
             const_ctype = 'const ' + ctype
+            const_stype = 'const void*' if stype == 'const void*' else None
             ptr_ctype = ctype + ' *'
             const_ptr_ctype = 'const ' + ptr_ctype
             const_ptr_ptr_ctype = 'const ' + ptr_ctype + '*'
-            types[const_ctype] = Type(const_ctype)
-            types[ptr_ctype] = Type(ptr_ctype, printf='%p')
-            types[const_ptr_ctype] = Type(const_ptr_ctype, printf='%p')
-            types[const_ptr_ptr_ctype] = Type(const_ptr_ptr_ctype, printf='%p')
+            types[const_ctype] = Type(const_ctype, stype=const_stype)
+            types[ptr_ctype] = Type(ptr_ctype, printf='%p', stype='const void*')
+            types[const_ptr_ctype] = Type(const_ptr_ctype, printf='%p', stype='const void*')
+            types[const_ptr_ptr_ctype] = Type(const_ptr_ptr_ctype,
+                                              printf='%p', stype='const void*')
 
     path1 = os.path.join(args.source_dir, 'OpenGL-Registry/xml/gl.xml')
     path2 = os.path.join(args.source_dir, 'OpenGL-Registry/xml/glx.xml')
@@ -233,7 +238,7 @@ def gen_trace_source():
         # Store the function ID
         src.add('  pumpkintown::serialize()->write(pumpkintown::FunctionId::{});'.format(
             func.name))
-        if func.is_serializable() and func.params:
+        if func.is_replayable() and func.params:
             src.add('  pumpkintown::{} fn;'.format(func.cxx_struct_name()))
             if func.has_return() and func.return_type.stype:
                 src.add('  fn.return_value = return_value;')
@@ -246,7 +251,7 @@ def gen_trace_source():
             if func.has_array_params() and not func.custom_io:
                 src.add('  fn.finalize();')
             src.add('  pumpkintown::serialize()->write(fn.num_bytes());')
-            src.add('  fn.write(pumpkintown::serialize()->file());')
+            src.add('  fn.write_from_file(pumpkintown::serialize()->file());')
             # Prevent double free
             for param in func.params:
                 if param.array:
@@ -352,7 +357,7 @@ def gen_function_structs_header():
     src.add_cxx_include('string', system=True)
     src.add('namespace pumpkintown {')
     for func in FUNCTIONS:
-        if not func.is_serializable() or not func.params:
+        if func.is_empty():
             continue
         # TODO(nicholasbishop): consider packing the struct
         src.add('struct {} {{'.format(func.cxx_struct_name()))
@@ -361,8 +366,8 @@ def gen_function_structs_header():
             src.add('  void finalize();')
         src.add('  uint64_t num_bytes() const;')
         src.add('  std::string to_string() const;')
-        src.add('  void read(FILE* f);')
-        src.add('  void write(FILE* f);')
+        src.add('  void read_from_file(FILE* f);')
+        src.add('  void write_from_file(FILE* f);')
         if func.has_return() and func.return_type.stype:
             src.add('  {} return_value;'.format(func.return_type.stype))
         for param in func.params:
@@ -392,7 +397,7 @@ def gen_function_structs_source():
     #
     # TODO(nicholasbishop): byte order
     for func in FUNCTIONS:
-        if not func.is_serializable() or not func.params:
+        if not func.is_replayable() or not func.params:
             continue
         if func.custom_io:
             continue
@@ -428,10 +433,10 @@ def gen_function_structs_source():
             elif param.ptype.ctype == 'GLenum':
                 src.add('  result += lookup_gl_enum_string({});'.format(param.name))
             else:
-                src.add('  result += std::to_string({});'.format(param.name))
+                src.add('  result += pumpkintown::to_string({});'.format(param.name))
         src.add('  return result + ")";'.format(func.name))
         src.add('}')
-        src.add('void {}::read(FILE* f) {{'.format(func.cxx_struct_name()))
+        src.add('void {}::read_from_file(FILE* f) {{'.format(func.cxx_struct_name()))
         src.add('  read_exact(f, this, sizeof(*this));')
         for param in func.params:
             if param.array:
@@ -445,7 +450,7 @@ def gen_function_structs_source():
                 src.add('    {} = nullptr;'.format(param.name))
                 src.add('  }')
         src.add('}')
-        src.add('void {}::write(FILE* f) {{'.format(func.cxx_struct_name()))
+        src.add('void {}::write_from_file(FILE* f) {{'.format(func.cxx_struct_name()))
         src.add('  write_exact(f, this, sizeof(*this));')
         for param in func.params:
             if param.array:
@@ -513,14 +518,14 @@ def gen_replay_source():
             src.add('    waffle_window_swap_buffers(waffle_window_);')
             src.add('    break;')
             continue
-        elif not func.is_serializable():
+        elif not func.is_replayable():
             src.add('    printf("stub\\n");')
             src.add('    break;')
             continue
         src.add('    {')
         if func.params:
             src.add('      {} fn;'.format(func.cxx_struct_name()))
-            src.add('      fn.read(iter_.file());')
+            src.add('      fn.read_from_file(iter_.file());')
             src.add('      printf("%s\\n", fn.to_string().c_str());')
         if func.custom_replay:
             src.add('      custom_{}(fn);'.format(func.name))
@@ -551,7 +556,7 @@ def gen_dump_cc():
     src.add('    break;')
     for func in FUNCTIONS:
         src.add('  case FunctionId::{}:'.format(func.name))
-        if not func.is_serializable():
+        if not func.is_replayable():
             src.add('    break;')
             continue
         if func.custom_io:
@@ -617,7 +622,7 @@ def main():
     gen_gl_functions_header().write(os.path.join(args.build_dir, 'pumpkintown_gl_functions.hh'))
     gen_gl_functions_source().write(os.path.join(args.build_dir, 'pumpkintown_gl_functions.cc'))
 
-    gen_dump_cc().write(os.path.join(args.build_dir, 'pumpkintown_dump_gen.cc'))
+    #gen_dump_cc().write(os.path.join(args.build_dir, 'pumpkintown_dump_gen.cc'))
     gen_replay_source().write(os.path.join(args.build_dir, 'pumpkintown_replay_gen.cc'))
 
 
