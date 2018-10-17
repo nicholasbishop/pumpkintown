@@ -238,7 +238,7 @@ def gen_trace_source():
         # Store the function ID
         src.add('  pumpkintown::serialize()->write(pumpkintown::FunctionId::{});'.format(
             func.name))
-        if func.is_replayable() and func.params:
+        if func.is_replayable() and not func.is_empty():
             src.add('  pumpkintown::{} fn;'.format(func.cxx_struct_name()))
             if func.has_return() and func.return_type.stype:
                 src.add('  fn.return_value = return_value;')
@@ -397,7 +397,7 @@ def gen_function_structs_source():
     #
     # TODO(nicholasbishop): byte order
     for func in FUNCTIONS:
-        if not func.is_replayable() or not func.params:
+        if not func.is_replayable() or func.is_empty():
             continue
         if func.custom_io:
             continue
@@ -523,7 +523,7 @@ def gen_replay_source():
             src.add('    break;')
             continue
         src.add('    {')
-        if func.params:
+        if not func.is_empty():
             src.add('      {} fn;'.format(func.cxx_struct_name()))
             src.add('      fn.read_from_file(iter_.file());')
             src.add('      printf("%s\\n", fn.to_string().c_str());')

@@ -141,6 +141,11 @@ void Replay::custom_glXMakeCurrent(const FnGlXMakeCurrent& fn) {
   waffle_make_current(display_, window_, contexts_[fn.ctx]);
 }
 
+void Replay::custom_glCreateProgram(const FnGlCreateProgram& fn) {
+  const uint32_t new_id{glCreateProgram()};
+  program_ids_[fn.return_value] = new_id;
+}
+
 void Replay::custom_glGenBuffers(const FnGlGenBuffers& fn) {
   std::vector<uint32_t> new_ids;
   new_ids.resize(fn.buffers_length);
