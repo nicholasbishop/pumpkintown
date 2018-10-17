@@ -35,6 +35,16 @@ void FnGlTexImage2D::finalize() {
   }
 }
 
+void FnGlTexSubImage2D::finalize() {
+  if (pixels) {
+    pixels_length = (gl_texture_type_num_bytes(type) *
+                     gl_texture_format_num_components(format) *
+                     width * height);
+  } else {
+    pixels_length = 0;
+  }
+}
+
 void FnGlGenFramebuffers::finalize() {
   framebuffers_length = n;
 }
@@ -57,6 +67,10 @@ void FnGlBufferData::finalize() {
 
 void FnGlVertexAttrib4fv::finalize() {
   v_length = 4;
+}
+
+void FnGlProgramBinary::finalize() {
+  binary_length = length;
 }
 
 void FnGlLightfv::finalize() {

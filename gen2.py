@@ -222,6 +222,8 @@ def gen_trace_source():
     for func in FUNCTIONS:
         src.add('{} {{'.format(func.cxx_decl()))
         src.add('  ' + func.cxx_function_type_alias())
+        if True:
+            src.add('  fprintf(stderr, "{}\\n");'.format(func.name))
         # Static function pointer to the "real" call
         src.add('  static Fn real_fn = reinterpret_cast<Fn>(get_real_proc_addr("{}"));'.format(func.name))
         # Call the real function
@@ -380,6 +382,7 @@ def gen_function_structs_header():
 def gen_function_structs_source():
     src = Source()
     src.add_cxx_include('pumpkintown_function_structs.hh')
+    src.add_cxx_include('sstream', system=True)
     src.add_cxx_include('pumpkintown_gl_enum.hh')
     src.add_cxx_include('pumpkintown_io.hh')
     src.add('namespace pumpkintown {')
@@ -417,7 +420,11 @@ def gen_function_structs_source():
             if param.array:
                 pass
             elif param.offset:
-                pass
+                src.add('  {')
+                src.add('    std::ostringstream oss;')
+                src.add('    oss << {};'.format(param.name))
+                src.add('    result += oss.str();')
+                src.add('  }')
             elif param.ptype.ctype == 'GLenum':
                 src.add('  result += lookup_gl_enum_string({});'.format(param.name))
             else:

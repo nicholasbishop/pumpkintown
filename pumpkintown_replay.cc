@@ -1,5 +1,6 @@
 #include "pumpkintown_replay.hh"
 
+#include <cassert>
 #include <vector>
 
 #include <stdlib.h>
@@ -74,6 +75,9 @@ void Replay::custom_glGenBuffers(const FnGlGenBuffers& fn) {
 }
 
 void Replay::custom_glBindBuffer(const FnGlBindBuffer& fn) {
+  if (fn.buffer != 0) {
+    assert(buffer_ids_[fn.buffer] != 0);
+  }
   glBindBuffer(fn.target, buffer_ids_[fn.buffer]);
 }
 
@@ -140,6 +144,53 @@ void Replay::custom_glCallList(const FnGlCallList& fn) {
   glCallList(display_list_ids_[fn.list]);
 }
 
+void Replay::custom_glCompileShader(const FnGlCompileShader& fn) {
+  glCompileShader(fn.shader);
+
+  // Print shader source
+  if (false) {
+    GLint srclen = 0;
+    glGetShaderiv(fn.shader, GL_SHADER_SOURCE_LENGTH, &srclen);
+    std::vector<char> src(srclen);
+    glGetShaderSource(fn.shader, srclen, &srclen, src.data());
+    fprintf(stderr, "shader source: %s\n", src.data());
+  }
+
+  GLint success = 0;
+  glGetShaderiv(fn.shader, GL_COMPILE_STATUS, &success);
+  if (success) {
+    return;
+  }
+
+  fprintf(stderr, "compile failed:\n");
+
+  GLint length = 0;
+  glGetShaderiv(fn.shader, GL_INFO_LOG_LENGTH, &length);
+  std::vector<char> log(length);
+  glGetShaderInfoLog(fn.shader, length, &length, log.data());
+
+  fprintf(stderr, "%s\n", log.data());
+}
+
+void Replay::custom_glLinkProgram(const FnGlLinkProgram& fn) {
+  glLinkProgram(fn.program);
+
+  GLint success = 0;
+  glGetProgramiv(fn.program, GL_LINK_STATUS, &success);
+  if (success) {
+    return;
+  }
+
+  fprintf(stderr, "link failed:\n");
+
+  GLint length = 0;
+  glGetProgramiv(fn.program, GL_INFO_LOG_LENGTH, &length);
+  std::vector<char> log(length);
+  glGetProgramInfoLog(fn.program, length, &length, log.data());
+
+  fprintf(stderr, "%s\n", log.data());
+}
+
 }
 
 int main(int argc, char** argv) {
@@ -160,14 +211,21 @@ int main(int argc, char** argv) {
   const int32_t config_attrs[] = {
     WAFFLE_CONTEXT_API,         WAFFLE_CONTEXT_OPENGL,
 
+    WAFFLE_CONTEXT_MAJOR_VERSION, 3,
+    WAFFLE_CONTEXT_MINOR_VERSION, 3,
+
     WAFFLE_RED_SIZE,            8,
     WAFFLE_BLUE_SIZE,           8,
     WAFFLE_GREEN_SIZE,          8,
 
-    WAFFLE_DEPTH_SIZE, 8,
+    WAFFLE_DEPTH_SIZE, 24,
+
+    WAFFLE_STENCIL_SIZE, 1,
 
          
     WAFFLE_DOUBLE_BUFFERED, false,
+
+    WAFFLE_CONTEXT_DEBUG, true,
 
     0,
   };

@@ -36,6 +36,9 @@ class Replay {
   void custom_glNewList(const FnGlNewList& fn);
   void custom_glCallList(const FnGlCallList& fn);
 
+  void custom_glCompileShader(const FnGlCompileShader& fn);
+  void custom_glLinkProgram(const FnGlLinkProgram& fn);
+
  private:
   void replay_one();
 

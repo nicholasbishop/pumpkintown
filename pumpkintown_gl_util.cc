@@ -13,6 +13,7 @@ uint64_t gl_texture_format_num_components(const GLenum type) {
       return 1;
     case GL_RGB:
       return 3;
+    case GL_BGRA:
     case GL_RGBA:
       return 4;
   }

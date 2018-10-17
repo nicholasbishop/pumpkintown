@@ -6,6 +6,13 @@
       }
     }
   },
+  "glTexSubImage2D": {
+    "params": {
+      "pixels": {
+        "array": "uint8_t"
+      }
+    }
+  },
   "glGenTextures": {
     "custom_replay": true,
     "params": {
@@ -91,6 +98,19 @@
         "array": "int32_t"
       }
     }
+  },
+  "glProgramBinary": {
+    "params": {
+      "binary": {
+        "array": "uint8_t"
+      }
+    }
+  },
+  "glCompileShader": {
+    "custom_replay": true
+  },
+  "glLinkProgram": {
+    "custom_replay": true
   },
   "glGenLists": {
     "custom_replay": true
