@@ -48,12 +48,16 @@ void check_gl_error() {
 
 }
 
+Replay::Context::Context(waffle_config* config) {
+  texture_ids[0] = 0;
+  framebuffer_ids[0] = 0;
+  vertex_arrays_ids[0] = 0;
+  waffle = waffle_context_create(config, NULL);
+  assert(waffle);
+}
+
 Replay::Replay(const std::string& path)
     : iter_{path} {
-  texture_ids_[0] = 0;
-  framebuffer_ids_[0] = 0;
-  vertex_arrays_ids_[0] = 0;
-
   const int32_t init_attrs[] = {
     WAFFLE_PLATFORM, WAFFLE_PLATFORM_GLX,
     0,
@@ -63,8 +67,8 @@ Replay::Replay(const std::string& path)
     WAFFLE_CONTEXT_API,         WAFFLE_CONTEXT_OPENGL,
 
 #if 1
-    WAFFLE_CONTEXT_MAJOR_VERSION, 4,
-    WAFFLE_CONTEXT_MINOR_VERSION, 5,
+    WAFFLE_CONTEXT_MAJOR_VERSION, 3,
+    WAFFLE_CONTEXT_MINOR_VERSION, 0,
 
     //WAFFLE_CONTEXT_PROFILE,  WAFFLE_CONTEXT_COMPATIBILITY_PROFILE,
 #endif
@@ -96,11 +100,11 @@ Replay::Replay(const std::string& path)
   assert(config_);
   window_ = waffle_window_create(config_, window_width, window_height);
   assert(window_);
-  default_context_ = waffle_context_create(config_, NULL);
-  assert(default_context_);
+  default_context_ = new Context(config_);
+  c_ = default_context_;
 
   waffle_window_show(window_);
-  waffle_make_current(display_, window_, default_context_);
+  waffle_make_current(display_, window_, default_context_->waffle);
 
   glClearColor(0.4, 0, 0, 1);
   glClear(GL_COLOR_BUFFER_BIT);
@@ -122,63 +126,56 @@ void Replay::replay() {
 }
 
 void Replay::custom_glXCreateContext(const FnGlXCreateContext& fn) {
-  waffle_context* ctx = waffle_context_create(config_, nullptr);
-  assert(ctx);
-  contexts_[fn.return_value] = ctx;
+  contexts_[fn.return_value] = new Context(config_);
 }
 
 void Replay::custom_glXCreateContextAttribsARB(const FnGlXCreateContextAttribsARB& fn) {
-  waffle_context* ctx = waffle_context_create(config_, nullptr);
-  assert(ctx);
-  contexts_[fn.return_value] = ctx;
+  contexts_[fn.return_value] = new Context(config_);
 }
 
 void Replay::custom_glXCreateNewContext(const FnGlXCreateNewContext& fn) {
-  waffle_context* ctx = waffle_context_create(config_, nullptr);
-  assert(ctx);
-  contexts_[fn.return_value] = ctx;
+  contexts_[fn.return_value] = new Context(config_);
 }
 
 void Replay::custom_glXMakeContextCurrent(const FnGlXMakeContextCurrent& fn) {
-  waffle_make_current(display_, window_, contexts_[fn.ctx]);
+  c_ = contexts_[fn.ctx];
+  waffle_make_current(display_, window_, c_->waffle);
 }
 
 void Replay::custom_glXMakeCurrent(const FnGlXMakeCurrent& fn) {
-  waffle_make_current(display_, window_, contexts_[fn.ctx]);
+  c_ = contexts_[fn.ctx];
+  waffle_make_current(display_, window_, c_->waffle);
 }
 
 void Replay::custom_glCreateProgram(const FnGlCreateProgram& fn) {
   const uint32_t new_id{glCreateProgram()};
-  program_ids_[fn.return_value] = new_id;
+  c_->program_ids[fn.return_value] = new_id;
 }
 
 void Replay::custom_glCreateShader(const FnGlCreateShader& fn) {
   const uint32_t new_id{glCreateShader(fn.type)};
-  shader_ids_[fn.return_value] = new_id;
+  c_->shader_ids[fn.return_value] = new_id;
 }
 
 void Replay::custom_glAttachShader(const FnGlAttachShader& fn) {
-  glAttachShader(program_ids_[fn.program], shader_ids_[fn.shader]);
+  glAttachShader(c_->program_ids[fn.program], c_->shader_ids[fn.shader]);
 }
 
 void Replay::custom_glGenBuffers(const FnGlGenBuffers& fn) {
   std::vector<uint32_t> new_ids;
   new_ids.resize(fn.buffers_length);
   glGenBuffers(fn.buffers_length, new_ids.data());
-  fprintf(stderr, "BISH: %lu\n", fn.buffers_length);
 
   for (uint32_t i{0}; i < fn.buffers_length; i++) {
-    fprintf(stderr, "BISH: %d -> %d\n", fn.buffers[i], new_ids[i]);
-    buffer_ids_[fn.buffers[i]] = new_ids[i];
+    c_->buffer_ids[fn.buffers[i]] = new_ids[i];
   }
 }
 
 void Replay::custom_glBindBuffer(const FnGlBindBuffer& fn) {
   if (fn.buffer != 0) {
-    assert(buffer_ids_[fn.buffer] != 0);
+    assert(c_->buffer_ids[fn.buffer] != 0);
   }
-  fprintf(stderr, "BISH2: %d -> %d\n", fn.buffer, buffer_ids_[fn.buffer]);
-  glBindBuffer(fn.target, buffer_ids_[fn.buffer]);
+  glBindBuffer(fn.target, c_->buffer_ids[fn.buffer]);
 }
 
 void Replay::custom_glGenTextures(const FnGlGenTextures& fn) {
@@ -187,18 +184,18 @@ void Replay::custom_glGenTextures(const FnGlGenTextures& fn) {
   glGenTextures(fn.textures_length, new_ids.data());
 
   for (uint32_t i{0}; i < fn.textures_length; i++) {
-    texture_ids_[fn.textures[i]] = new_ids[i];
+    c_->texture_ids[fn.textures[i]] = new_ids[i];
   }
 }
 
 void Replay::custom_glBindTexture(const FnGlBindTexture& fn) {
-  glBindTexture(fn.target, texture_ids_[fn.texture]);
+  glBindTexture(fn.target, c_->texture_ids[fn.texture]);
 }
 
 void Replay::custom_glDeleteTextures(const FnGlDeleteTextures& fn) {
   glDeleteTextures(fn.textures_length, fn.textures);
   for (uint32_t i{0}; i < fn.textures_length; i++) {
-    texture_ids_.erase(fn.textures[i]);
+    c_->texture_ids.erase(fn.textures[i]);
   }
 }
 
@@ -208,12 +205,12 @@ void Replay::custom_glGenFramebuffers(const FnGlGenFramebuffers& fn) {
   glGenFramebuffers(fn.framebuffers_length, new_ids.data());
 
   for (uint32_t i{0}; i < fn.framebuffers_length; i++) {
-    framebuffer_ids_[fn.framebuffers[i]] = new_ids[i];
+    c_->framebuffer_ids[fn.framebuffers[i]] = new_ids[i];
   }
 }
 
 void Replay::custom_glBindFramebuffer(const FnGlBindFramebuffer& fn) {
-  glBindFramebuffer(fn.target, framebuffer_ids_[fn.framebuffer]);
+  glBindFramebuffer(fn.target, c_->framebuffer_ids[fn.framebuffer]);
 }
 
 void Replay::custom_glGenVertexArrays(const FnGlGenVertexArrays& fn) {
@@ -222,12 +219,12 @@ void Replay::custom_glGenVertexArrays(const FnGlGenVertexArrays& fn) {
   glGenVertexArrays(fn.arrays_length, new_ids.data());
 
   for (uint32_t i{0}; i < fn.arrays_length; i++) {
-    vertex_arrays_ids_[fn.arrays[i]] = new_ids[i];
+    c_->vertex_arrays_ids[fn.arrays[i]] = new_ids[i];
   }
 }
 
 void Replay::custom_glBindVertexArray(const FnGlBindVertexArray& fn) {
-  glBindVertexArray(vertex_arrays_ids_[fn.array]);
+  glBindVertexArray(c_->vertex_arrays_ids[fn.array]);
 }
 
 void Replay::custom_glGenRenderbuffers(const FnGlGenRenderbuffers& fn) {
@@ -236,33 +233,33 @@ void Replay::custom_glGenRenderbuffers(const FnGlGenRenderbuffers& fn) {
   glGenRenderbuffers(fn.renderbuffers_length, new_ids.data());
 
   for (uint32_t i{0}; i < fn.renderbuffers_length; i++) {
-    renderbuffer_ids_[fn.renderbuffers[i]] = new_ids[i];
+    c_->renderbuffer_ids[fn.renderbuffers[i]] = new_ids[i];
   }
 }
 
 void Replay::custom_glBindRenderbuffer(const FnGlBindRenderbuffer& fn) {
-  glBindRenderbuffer(fn.target, renderbuffer_ids_[fn.renderbuffer]);
+  glBindRenderbuffer(fn.target, c_->renderbuffer_ids[fn.renderbuffer]);
 }
 
 void Replay::custom_glFramebufferTexture2D(const FnGlFramebufferTexture2D& fn) {
   glFramebufferTexture2D(fn.target, fn.attachment, fn.textarget,
-                         texture_ids_[fn.texture], fn.level);
+                         c_->texture_ids[fn.texture], fn.level);
 }
 
 void Replay::custom_glGenLists(const FnGlGenLists& fn) {
   const auto new_start{glGenLists(fn.range)};
 
   for (int32_t i{0}; i < fn.range; i++) {
-    display_list_ids_[fn.return_value + i] = new_start + i;
+    c_->display_list_ids[fn.return_value + i] = new_start + i;
   }
 }
 
 void Replay::custom_glNewList(const FnGlNewList& fn) {
-  glNewList(display_list_ids_[fn.list], fn.mode);
+  glNewList(c_->display_list_ids[fn.list], fn.mode);
 }
 
 void Replay::custom_glCallList(const FnGlCallList& fn) {
-  glCallList(display_list_ids_[fn.list]);
+  glCallList(c_->display_list_ids[fn.list]);
 }
 
 void Replay::custom_glCompileShader(const FnGlCompileShader& fn) {

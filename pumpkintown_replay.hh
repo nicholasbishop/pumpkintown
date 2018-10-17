@@ -64,16 +64,22 @@ class Replay {
   waffle_window* window_{nullptr};
   waffle_config* config_{nullptr};
   waffle_display* display_{nullptr};
-  waffle_context* default_context_{nullptr};
-  std::map<const void*, waffle_context*> contexts_;
-  std::map<uint32_t, uint32_t> shader_ids_;
-  std::map<uint32_t, uint32_t> program_ids_;
-  std::map<uint32_t, uint32_t> buffer_ids_;
-  std::map<uint32_t, uint32_t> vertex_arrays_ids_;
-  std::map<uint32_t, uint32_t> framebuffer_ids_;
-  std::map<uint32_t, uint32_t> texture_ids_;
-  std::map<uint32_t, uint32_t> display_list_ids_;
-  std::map<uint32_t, uint32_t> renderbuffer_ids_;
+  struct Context {
+    explicit Context(waffle_config* config);
+
+    waffle_context* waffle{nullptr};
+    std::map<uint32_t, uint32_t> shader_ids;
+    std::map<uint32_t, uint32_t> program_ids;
+    std::map<uint32_t, uint32_t> buffer_ids;
+    std::map<uint32_t, uint32_t> vertex_arrays_ids;
+    std::map<uint32_t, uint32_t> framebuffer_ids;
+    std::map<uint32_t, uint32_t> texture_ids;
+    std::map<uint32_t, uint32_t> display_list_ids;
+    std::map<uint32_t, uint32_t> renderbuffer_ids;
+  };
+  Context* default_context_{nullptr};
+  std::map<const void*, Context*> contexts_;
+  Context* c_{nullptr};
 };
 
 }
