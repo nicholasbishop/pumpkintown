@@ -154,7 +154,7 @@ void Replay::replay() {
       glGetError();
     }
 
-    capture();
+    //capture();
   }
 }
 
@@ -303,7 +303,8 @@ void Replay::custom_glBindRenderbuffer(const FnGlBindRenderbuffer& fn) {
 }
 
 void Replay::custom_glFramebufferTexture2D(const FnGlFramebufferTexture2D& fn) {
-  glFramebufferTexture2D(fn.target, fn.attachment, fn.textarget,
+  glFramebufferTexture2D(c_->framebuffer_ids[fn.target], fn.attachment,
+                         fn.textarget,
                          c_->texture_ids[fn.texture], fn.level);
 }
 

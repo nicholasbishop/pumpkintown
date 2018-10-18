@@ -216,5 +216,29 @@
   },
   "glDeleteProgram": {
     "custom_replay": true
+  },
+  "glXGetConfig": {
+    "no_replay": true
+  },
+  "glXQueryVersion": {
+    "no_replay": true
+  },
+  "glXQueryExtensionsString": {
+    "no_replay": true
+  },
+  "glXGetFBConfigs": {
+    "no_replay": true
+  },
+  "glXGetFBConfigAttrib": {
+    "no_replay": true
+  },
+  "glGetString": {
+    "no_replay": true
+  },
+  "glGetIntegerv": {
+    "no_replay": true
+  },
+  "glGetStringi": {
+    "no_replay": true
   }
 }

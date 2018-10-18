@@ -90,6 +90,7 @@ class Function:
     return_type = attr.ib()
     params = attr.ib()
     custom_replay = attr.ib(default=False)
+    no_replay = attr.ib(default=False)
     custom_io = attr.ib(default=False)
 
     def param(self, name):
@@ -120,6 +121,8 @@ class Function:
         return 'Fn{}{}'.format(self.name[0].upper(), self.name[1:])
 
     def is_replayable(self):
+        if self.no_replay:
+            return False
         if self.custom_io or self.custom_replay:
             return True
         for param in self.params:
@@ -196,6 +199,7 @@ def load_glinfo(args):
                         param.array = overrides.get('array')
                         param.offset = overrides.get('offset')
                     func.custom_replay = val.get('custom_replay')
+                    func.no_replay = val.get('no_replay')
                     func.custom_io = val.get('custom_io')
                     found = True
                     break
@@ -517,6 +521,9 @@ def gen_replay_source():
     src.add('    break;')
     for func in FUNCTIONS:
         src.add('  case FunctionId::{}:'.format(func.name))
+        if func.no_replay:
+            src.add('    iter_.skip();')
+            src.add('    break;')
         src.add('    printf("{}\\n");'.format(func.name))
         if func.name == 'glXSwapBuffers':
             src.add('    waffle_window_swap_buffers(window_);')
