@@ -524,12 +524,13 @@ def gen_replay_source():
         if func.no_replay:
             src.add('    iter_.skip();')
             src.add('    break;')
-        src.add('    printf("{}\\n");'.format(func.name))
         if func.name == 'glXSwapBuffers':
+            src.add('    printf("{}\\n");'.format(func.name))
             src.add('    waffle_window_swap_buffers(window_);')
             src.add('    break;')
             continue
         elif not func.is_replayable():
+            src.add('    printf("{}\\n");'.format(func.name))
             src.add('    printf("stub\\n");')
             src.add('    break;')
             continue
