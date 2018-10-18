@@ -245,12 +245,12 @@ void Replay::custom_glGenTextures(const FnGlGenTextures& fn) {
   for (uint32_t i{0}; i < fn.textures_length; i++) {
     assert(new_ids[i] != 0);
     c_->texture_ids[fn.textures[i]] = new_ids[i];
-    fprintf(stderr, "gen-texture %p %d -> %d\n", c_, fn.textures[i], new_ids[i]);
+    fprintf(stderr, "gen-texture %d -> %d\n", fn.textures[i], new_ids[i]);
   }
 }
 
 void Replay::custom_glBindTexture(const FnGlBindTexture& fn) {
-  fprintf(stderr, "bind-texture %p %d\n", c_, fn.texture);
+  fprintf(stderr, "bind-texture %d\n", fn.texture);
   if (fn.texture != 0) {
     assert(c_->texture_ids.at(fn.texture) != 0);
   }
@@ -260,10 +260,12 @@ void Replay::custom_glBindTexture(const FnGlBindTexture& fn) {
 void Replay::custom_glDeleteTextures(const FnGlDeleteTextures& fn) {
   std::vector<uint32_t> tex_ids;
   for (uint32_t i{0}; i < fn.textures_length; i++) {
-    tex_ids.emplace_back(c_->texture_ids.at(fn.textures[i]));
-    c_->texture_ids.erase(fn.textures[i]);
+    if (fn.textures[i] != 0) {
+      tex_ids.emplace_back(c_->texture_ids.at(fn.textures[i]));
+      c_->texture_ids.erase(fn.textures[i]);
+    }
   }
-  glDeleteTextures(fn.textures_length, tex_ids.data());
+  glDeleteTextures(tex_ids.size(), tex_ids.data());
 }
 
 void Replay::custom_glGenFramebuffers(const FnGlGenFramebuffers& fn) {
