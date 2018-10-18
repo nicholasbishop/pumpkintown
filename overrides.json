@@ -126,6 +126,7 @@
     "custom_replay": true
   },
   "glLinkProgram": {
+    "trace_append": true,
     "custom_replay": true
   },
   "glGenLists": {

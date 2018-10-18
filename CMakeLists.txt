@@ -24,6 +24,7 @@ add_custom_command(
 
 add_library(pumpkintown
   SHARED
+  pumpkintown_custom_trace.cc
   pumpkintown_dlib.cc
   pumpkintown_finalizers.cc
   pumpkintown_function_name.cc

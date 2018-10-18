@@ -93,6 +93,7 @@ class Function:
     custom_replay = attr.ib(default=False)
     no_replay = attr.ib(default=False)
     custom_io = attr.ib(default=False)
+    trace_append = attr.ib(default=False)
 
     def param(self, name):
         for param in self.params:
@@ -203,6 +204,7 @@ def load_glinfo(args):
                     func.custom_replay = val.get('custom_replay')
                     func.no_replay = val.get('no_replay')
                     func.custom_io = val.get('custom_io')
+                    func.trace_append = val.get('trace_append')
                     found = True
                     break
             if not found:
@@ -233,6 +235,7 @@ def gen_trace_source():
     src.add_cxx_include('cstring', system=True)
     src.add_cxx_include('pumpkintown_function_structs.hh')
     src.add_cxx_include('pumpkintown_dlib.hh')
+    src.add_cxx_include('pumpkintown_custom_trace.hh')
     src.add_cxx_include('pumpkintown_serialize.hh')
     for func in FUNCTIONS:
         src.add('{} {{'.format(func.cxx_decl()))
@@ -245,6 +248,10 @@ def gen_trace_source():
         src.add('  {}real_fn({});'.format(
             'auto return_value = ' if func.has_return() else '',
             ', '.join(param.name for param in func.params)))
+        # Optional custom actions
+        if func.trace_append:
+            src.add('  pumpkintown::trace_append_{}({});'.format(
+                func.name, func.cxx_call_args()))
         # Store the function ID
         src.add('  pumpkintown::serialize()->write(pumpkintown::FunctionId::{});'.format(
             func.name))
