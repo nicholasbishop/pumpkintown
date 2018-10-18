@@ -134,7 +134,6 @@ void Replay::capture() {
   GLint current{0};
   glGetIntegerv(GL_RENDERBUFFER_BINDING, &current);
   for (const auto id : c_->r->renderbuffer_ids) {
-    //fprintf(stderr, "id=%ld\n", id);
     glBindRenderbuffer(GL_RENDERBUFFER, id.second);
 
     int x = 0;
@@ -191,7 +190,6 @@ void Replay::custom_glXMakeContextCurrent(const FnGlXMakeContextCurrent& fn) {
   } else {
     c_ = contexts_.at(fn.ctx);
     waffle_make_current(display_, window_, c_->waffle);
-    fprintf(stderr, "make-current %p\n", c_);
   }
 }
 
@@ -201,7 +199,6 @@ void Replay::custom_glXMakeCurrent(const FnGlXMakeCurrent& fn) {
   } else {
     c_ = contexts_.at(fn.ctx);
     waffle_make_current(display_, window_, c_->waffle);
-    fprintf(stderr, "make-current %p\n", c_);
   }
 }
 
@@ -254,12 +251,10 @@ void Replay::custom_glGenTextures(const FnGlGenTextures& fn) {
   for (uint32_t i{0}; i < fn.textures_length; i++) {
     assert(new_ids[i] != 0);
     c_->r->texture_ids[fn.textures[i]] = new_ids[i];
-    fprintf(stderr, "gen-texture %d -> %d\n", fn.textures[i], new_ids[i]);
   }
 }
 
 void Replay::custom_glBindTexture(const FnGlBindTexture& fn) {
-  fprintf(stderr, "bind-texture %d\n", fn.texture);
   if (fn.texture != 0) {
     assert(c_->r->texture_ids.at(fn.texture) != 0);
   }
