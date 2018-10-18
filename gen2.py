@@ -442,7 +442,10 @@ def gen_function_structs_source():
                 src.add('  result += lookup_gl_enum_string({});'.format(param.name))
             else:
                 src.add('  result += pumpkintown::to_string({});'.format(param.name))
-        src.add('  return result + ")";'.format(func.name))
+        src.add('  std::string return_string;')
+        if func.has_return():
+            src.add('  return_string = " -> " + pumpkintown::to_string(return_value);')
+        src.add('  return result + ")" + return_string;'.format(func.name))
         src.add('}')
         src.add('void {}::read_from_file(FILE* f) {{'.format(func.cxx_struct_name()))
         src.add('  read_exact(f, this, sizeof(*this));')
