@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 
-set -eu
+set -eux
 
-ninja -C build && LD_LIBRARY_PATH=build/gl $@
+ninja -C build && LD_LIBRARY_PATH=${PWD}/build/gl LD_PRELOAD=${PWD}/build/gl/libGL.so.1 $@
