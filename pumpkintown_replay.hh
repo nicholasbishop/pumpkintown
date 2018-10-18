@@ -31,6 +31,8 @@ class Replay {
   void custom_glCreateProgram(const FnGlCreateProgram& fn);
   void custom_glCreateShader(const FnGlCreateShader& fn);
   void custom_glAttachShader(const FnGlAttachShader& fn);
+  void custom_glDeleteShader(const FnGlDeleteShader& fn);
+  void custom_glDeleteProgram(const FnGlDeleteProgram& fn);
 
   void custom_glGenBuffers(const FnGlGenBuffers& fn);
   void custom_glBindBuffer(const FnGlBindBuffer& fn);
@@ -59,6 +61,8 @@ class Replay {
 
  private:
   void replay_one();
+
+  void capture();
 
   TraceIterator iter_;
   waffle_window* window_{nullptr};

@@ -16,6 +16,10 @@
 #include "pumpkintown_gl_types.hh"
 #include "pumpkintown_io.hh"
 #include <unistd.h>
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 namespace pumpkintown {
 
 namespace {
@@ -67,8 +71,8 @@ Replay::Replay(const std::string& path)
     WAFFLE_CONTEXT_API,         WAFFLE_CONTEXT_OPENGL,
 
 #if 1
-    WAFFLE_CONTEXT_MAJOR_VERSION, 3,
-    WAFFLE_CONTEXT_MINOR_VERSION, 0,
+    WAFFLE_CONTEXT_MAJOR_VERSION, 4,
+    WAFFLE_CONTEXT_MINOR_VERSION, 5,
 
     //WAFFLE_CONTEXT_PROFILE,  WAFFLE_CONTEXT_COMPATIBILITY_PROFILE,
 #endif
@@ -112,6 +116,33 @@ Replay::Replay(const std::string& path)
   //waffle_window_swap_buffers(window_);
 }
 
+void Replay::capture() {
+  GLint current{0};
+  glGetIntegerv(GL_RENDERBUFFER_BINDING, &current);
+  for (const auto id : c_->renderbuffer_ids) {
+    //fprintf(stderr, "id=%ld\n", id);
+    glBindRenderbuffer(GL_RENDERBUFFER, id.second);
+
+    int x = 0;
+    int y = 0;
+    int width = 640;
+    int height = 480;
+    GLenum format = GL_RGBA;
+    GLenum type = GL_UNSIGNED_BYTE;
+    std::vector<uint8_t> data;
+    data.resize(width * height * 4);
+    glReadPixels(x, y, width, height, format, type, data.data());
+    const int comp = 4;
+    const int stride = 0;
+    static int capture_index = 0;
+    stbi_write_png(("rb" + std::to_string(capture_index) + ".png").c_str(),
+                   width, height, comp,
+                   data.data(), stride);
+    capture_index += 1;
+  }
+  glBindRenderbuffer(GL_RENDERBUFFER, current);
+}
+
 void Replay::replay() {
   while (!iter_.done()) {
     iter_.next();
@@ -122,6 +153,8 @@ void Replay::replay() {
     } else {
       glGetError();
     }
+
+    capture();
   }
 }
 
@@ -138,13 +171,23 @@ void Replay::custom_glXCreateNewContext(const FnGlXCreateNewContext& fn) {
 }
 
 void Replay::custom_glXMakeContextCurrent(const FnGlXMakeContextCurrent& fn) {
-  c_ = contexts_[fn.ctx];
-  waffle_make_current(display_, window_, c_->waffle);
+  // if (!fn.ctx) {
+  //   waffle_make_current(display_, window_, nullptr);
+  // } else {
+  //   c_ = contexts_.at(fn.ctx);
+  //   waffle_make_current(display_, window_, c_->waffle);
+  //   fprintf(stderr, "make-current %p\n", c_);
+  // }
 }
 
 void Replay::custom_glXMakeCurrent(const FnGlXMakeCurrent& fn) {
-  c_ = contexts_[fn.ctx];
-  waffle_make_current(display_, window_, c_->waffle);
+  // if (!fn.ctx) {
+  //   waffle_make_current(display_, window_, nullptr);
+  // } else {
+  //   c_ = contexts_.at(fn.ctx);
+  //   waffle_make_current(display_, window_, c_->waffle);
+  //   fprintf(stderr, "make-current %p\n", c_);
+  // }
 }
 
 void Replay::custom_glCreateProgram(const FnGlCreateProgram& fn) {
@@ -155,6 +198,16 @@ void Replay::custom_glCreateProgram(const FnGlCreateProgram& fn) {
 void Replay::custom_glCreateShader(const FnGlCreateShader& fn) {
   const uint32_t new_id{glCreateShader(fn.type)};
   c_->shader_ids[fn.return_value] = new_id;
+}
+
+void Replay::custom_glDeleteShader(const FnGlDeleteShader& fn) {
+  glDeleteShader(c_->shader_ids[fn.shader]);
+  c_->shader_ids.erase(fn.shader);
+}
+
+void Replay::custom_glDeleteProgram(const FnGlDeleteProgram& fn) {
+  glDeleteProgram(c_->program_ids[fn.program]);
+  c_->program_ids.erase(fn.program);
 }
 
 void Replay::custom_glAttachShader(const FnGlAttachShader& fn) {
@@ -184,19 +237,27 @@ void Replay::custom_glGenTextures(const FnGlGenTextures& fn) {
   glGenTextures(fn.textures_length, new_ids.data());
 
   for (uint32_t i{0}; i < fn.textures_length; i++) {
+    assert(new_ids[i] != 0);
     c_->texture_ids[fn.textures[i]] = new_ids[i];
+    fprintf(stderr, "gen-texture %p %d -> %d\n", c_, fn.textures[i], new_ids[i]);
   }
 }
 
 void Replay::custom_glBindTexture(const FnGlBindTexture& fn) {
-  glBindTexture(fn.target, c_->texture_ids[fn.texture]);
+  fprintf(stderr, "bind-texture %p %d\n", c_, fn.texture);
+  if (fn.texture != 0) {
+    assert(c_->texture_ids.at(fn.texture) != 0);
+  }
+  glBindTexture(fn.target, c_->texture_ids.at(fn.texture));
 }
 
 void Replay::custom_glDeleteTextures(const FnGlDeleteTextures& fn) {
-  glDeleteTextures(fn.textures_length, fn.textures);
+  std::vector<uint32_t> tex_ids;
   for (uint32_t i{0}; i < fn.textures_length; i++) {
+    tex_ids.emplace_back(c_->texture_ids.at(fn.textures[i]));
     c_->texture_ids.erase(fn.textures[i]);
   }
+  glDeleteTextures(fn.textures_length, tex_ids.data());
 }
 
 void Replay::custom_glGenFramebuffers(const FnGlGenFramebuffers& fn) {

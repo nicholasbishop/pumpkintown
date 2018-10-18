@@ -210,5 +210,11 @@
   },
   "glAttachShader": {
     "custom_replay": true
+  },
+  "glDeleteShader": {
+    "custom_replay": true
+  },
+  "glDeleteProgram": {
+    "custom_replay": true
   }
 }
