@@ -21,19 +21,6 @@ class Type:
     def is_void(self):
         return self.ctype == 'void'
 
-    @property
-    def read_method(self):
-        return {'int8_t': 'read_i8',
-                'int16_t': 'read_i16',
-                'int32_t': 'read_i32',
-                'int64_t': 'read_i64',
-                'uint8_t': 'read_u8',
-                'uint16_t': 'read_u16',
-                'uint32_t': 'read_u32',
-                'uint64_t': 'read_u64',
-                'float': 'read_f32',
-                'double': 'read_f64'}[self.stype]
-
 
 class Source:
     def __init__(self):
