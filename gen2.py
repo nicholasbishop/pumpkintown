@@ -5,110 +5,24 @@ import enum
 import json
 import os
 import subprocess
+import sys
 
 import attr
 
 from pumpkinpy import parse_xml
-from pumpkinpy.types import Function, Param, Type
+from pumpkinpy.types import Source
+
+FUNCTIONS = None
+ENUMS = None
 
 
-class Source:
-    def __init__(self):
-        self.lines = []
-
-    def add(self, item):
-        if isinstance(item, str):
-            self.lines.append(item)
-        else:
-            self.lines += item
-
-    def add_cxx_include(self, path, system=False):
-        if system:
-            string = '<{}>'.format(path)
-        else:
-            string = '"{}"'.format(path)
-        self.lines.append('#include {}'.format(string))
-
-    def add_guard(self, name):
-        self.lines = ['#ifndef ' + name, '#define ' + name] + self.lines
-        self.lines.append('#endif')
-
-    def text(self):
-        return '\n'.join(self.lines) + '\n'
-
-    def write(self, path):
-        with open(path, 'w') as wfile:
-            wfile.write(self.text())
-
-
-FUNCTIONS = []
-ENUMS = []
-
-
-def load_glinfo(args):
+def load_meta(args):
+    sys.path.append(args.build_dir)
+    import glmeta
     global FUNCTIONS
     global ENUMS
-    types = {}
-    path = os.path.join(args.source_dir, 'types.json')
-    with open(path) as rfile:
-        root = json.load(rfile)
-
-        for typ in root:
-            ctype = typ['c']
-            stype = typ.get('serialize')
-            printf = typ.get('printf')
-            types[ctype] = Type(ctype, stype, printf)
-
-            const_ctype = 'const ' + ctype
-            const_stype = 'const void*' if stype == 'const void*' else None
-            ptr_ctype = ctype + ' *'
-            const_ptr_ctype = 'const ' + ptr_ctype
-            const_ptr_ptr_ctype = 'const ' + ptr_ctype + '*'
-            types[const_ctype] = Type(const_ctype, stype=const_stype)
-            types[ptr_ctype] = Type(ptr_ctype, printf='%p', stype='const void*')
-            types[const_ptr_ctype] = Type(const_ptr_ctype, printf='%p', stype='const void*')
-            types[const_ptr_ptr_ctype] = Type(const_ptr_ptr_ctype,
-                                              printf='%p', stype='const void*')
-
-    path1 = os.path.join(args.source_dir, 'OpenGL-Registry/xml/gl.xml')
-    path2 = os.path.join(args.source_dir, 'OpenGL-Registry/xml/glx.xml')
-    registry = parse_xml.Registry()
-    parse_xml.parse_xml(registry, path1)
-    parse_xml.parse_xml(registry, path2)
-    for command in registry.commands:
-        try:
-            rtype = types[command.return_type]
-            params = []
-            for param in command.params:
-                params.append(Param(name=param.name, ptype=types[param.ptype]))
-            FUNCTIONS.append(Function(command.name, rtype, params))
-        except KeyError as err:
-            print(err)
-
-    ENUMS = registry.enums
-
-    path = os.path.join(args.source_dir, 'overrides.json')
-    with open(path) as rfile:
-        root = json.load(rfile)
-
-        for key, val in root.items():
-            found = False
-            for func in FUNCTIONS:
-                if func.name == key:
-                    for param_name, overrides in val.get('params', {}).items():
-                        param = func.param(param_name)
-                        param.array = overrides.get('array')
-                        param.offset = overrides.get('offset')
-                        param.custom_print = overrides.get('custom_print')
-                    func.custom_replay = val.get('custom_replay')
-                    func.no_replay = val.get('no_replay')
-                    func.custom_io = val.get('custom_io')
-                    func.trace_append = val.get('trace_append')
-                    found = True
-                    break
-            if not found:
-                raise KeyError('func not found: ' + key)
-
+    FUNCTIONS = glmeta.FUNCTIONS
+    ENUMS = glmeta.ENUMS
 
 def gen_exports():
     lines = ['extern "C" {']
@@ -533,7 +447,7 @@ def main():
     parser.add_argument('source_dir')
     args = parser.parse_args()
 
-    load_glinfo(args)
+    load_meta(args)
 
     gen_trace_source().write(os.path.join(args.build_dir, 'pumpkintown_trace.cc'))
     gen_trace_header().write(os.path.join(args.build_dir, 'pumpkintown_trace.hh'))
@@ -554,5 +468,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main(
-)
+    main()

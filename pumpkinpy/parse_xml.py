@@ -60,7 +60,6 @@ def parse_xml(registry, name):
         if command:
             registry.commands.append(command)
 
-    enums = []
     for node in root.iter('enum'):
         value = node.get('value')
         name = node.get('name')

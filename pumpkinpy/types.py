@@ -87,3 +87,32 @@ class Function:
 
     def is_empty(self):
         return not self.params and not self.has_return()
+
+
+class Source:
+    def __init__(self):
+        self.lines = []
+
+    def add(self, item):
+        if isinstance(item, str):
+            self.lines.append(item)
+        else:
+            self.lines += item
+
+    def add_cxx_include(self, path, system=False):
+        if system:
+            string = '<{}>'.format(path)
+        else:
+            string = '"{}"'.format(path)
+        self.lines.append('#include {}'.format(string))
+
+    def add_guard(self, name):
+        self.lines = ['#ifndef ' + name, '#define ' + name] + self.lines
+        self.lines.append('#endif')
+
+    def text(self):
+        return '\n'.join(self.lines) + '\n'
+
+    def write(self, path):
+        with open(path, 'w') as wfile:
+            wfile.write(self.text())
