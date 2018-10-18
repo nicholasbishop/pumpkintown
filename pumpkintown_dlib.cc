@@ -30,36 +30,6 @@ void* get_real_proc_addr(const unsigned char* name) {
   return get_real_proc_addr(reinterpret_cast<const char*>(name));
 }
 
-void* get_proc_address_gl(const char* name);
-void* get_proc_address_glx(const char* name);
-
-void* glXGetProcAddress(const char* name) {
-  printf("glXGetProcAddress: looking up %s\n", name);
-  void* result = get_proc_address_gl(name);
-  if (result) {
-    return result;
-  }
-  result = get_proc_address_glx(name);
-  if (result) {
-    return result;
-  }
-  printf("glXGetProcAddress: %s not found\n", name);
-  return NULL;
-}
-
-void write_all(FILE* f, const uint8_t* buf, const uint64_t size) {
-  uint64_t bytes_remaining = size;
-  while (bytes_remaining > 0) {
-    const auto bytes_written = fwrite(buf, 1, bytes_remaining, f);
-    if (bytes_written <= 0) {
-      fclose(f);
-      throw std::runtime_error("write failed");
-    }
-    bytes_remaining -= bytes_written;
-    buf += bytes_written;
-  }
-}
-
 namespace pumpkintown {
 
 Serialize* serialize() {
