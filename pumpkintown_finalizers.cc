@@ -86,23 +86,23 @@ void FnGlProgramBinary::finalize() {
 }
 
 void FnGlUniform1iv::finalize() {
-  value_length = 1;
+  value_length = 1 * count;
 }
 
 void FnGlUniform1fv::finalize() {
-  value_length = 1;
+  value_length = 1 * count;
 }
 
 void FnGlUniform2fv::finalize() {
-  value_length = 2;
+  value_length = 2 * count;
 }
 
 void FnGlUniform4fv::finalize() {
-  value_length = 4;
+  value_length = 4 * count;
 }
 
 void FnGlUniformMatrix4fv::finalize() {
-  value_length = 16;
+  value_length = 16 * count;
 }
 
 void FnGlLightfv::finalize() {
