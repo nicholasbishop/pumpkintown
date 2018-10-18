@@ -70,6 +70,7 @@ class Param:
     name = attr.ib()
     array = attr.ib(default=None)
     offset = attr.ib(default=None)
+    custom_print = attr.ib(default=None)
 
     def cxx(self):
         return '{} {}'.format(self.ptype.ctype, self.name)
@@ -198,6 +199,7 @@ def load_glinfo(args):
                         param = func.param(param_name)
                         param.array = overrides.get('array')
                         param.offset = overrides.get('offset')
+                        param.custom_print = overrides.get('custom_print')
                     func.custom_replay = val.get('custom_replay')
                     func.no_replay = val.get('no_replay')
                     func.custom_io = val.get('custom_io')
@@ -397,6 +399,7 @@ def gen_function_structs_source():
     src.add_cxx_include('pumpkintown_function_structs.hh')
     src.add_cxx_include('sstream', system=True)
     src.add_cxx_include('pumpkintown_gl_enum.hh')
+    src.add_cxx_include('pumpkintown_gl_util.hh')
     src.add_cxx_include('pumpkintown_io.hh')
     src.add('namespace pumpkintown {')
     # TODO(nicholasbishop): currently the format is a little
@@ -432,6 +435,9 @@ def gen_function_structs_source():
                 src.add('  result += ", ";')
             if param.array:
                 pass
+            elif param.custom_print:
+                src.add('  result += {}({});'.format(
+                    param.custom_print, param.name))
             elif param.offset:
                 src.add('  {')
                 src.add('    std::ostringstream oss;')

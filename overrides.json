@@ -147,6 +147,9 @@
   "glDrawElements": {
     "comment": "TODO(nicholasbishop): this can really be either an array or an offset",
     "params": {
+      "mode": {
+        "custom_print": "gl_draw_elements_mode_string"
+      },
       "indices": {
         "offset": "const void*"
       }
