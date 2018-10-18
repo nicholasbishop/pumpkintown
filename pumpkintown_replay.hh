@@ -68,10 +68,10 @@ class Replay {
   waffle_window* window_{nullptr};
   waffle_config* config_{nullptr};
   waffle_display* display_{nullptr};
-  struct Context {
-    explicit Context(waffle_config* config);
 
-    waffle_context* waffle{nullptr};
+  struct Resources {
+    Resources();
+
     std::map<uint32_t, uint32_t> buffer_ids;
     std::map<uint32_t, uint32_t> display_list_ids;
     std::map<uint32_t, uint32_t> framebuffer_ids;
@@ -80,6 +80,14 @@ class Replay {
     std::map<uint32_t, uint32_t> shader_ids;
     std::map<uint32_t, uint32_t> texture_ids;
     std::map<uint32_t, uint32_t> vertex_arrays_ids;
+  };
+
+  struct Context {
+    Context(waffle_config* config, Context* share_ctx=nullptr);
+
+    waffle_context* waffle{nullptr};
+    Resources* r{nullptr};
+    
   };
   Context* default_context_{nullptr};
   std::map<const void*, Context*> contexts_;

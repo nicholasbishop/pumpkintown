@@ -52,7 +52,7 @@ void check_gl_error() {
 
 }
 
-Replay::Context::Context(waffle_config* config) {
+Replay::Resources::Resources() {
   buffer_ids[0] = 0;
   display_list_ids[0] = 0;
   framebuffer_ids[0] = 0;
@@ -61,8 +61,16 @@ Replay::Context::Context(waffle_config* config) {
   shader_ids[0] = 0;
   texture_ids[0] = 0;
   vertex_arrays_ids[0] = 0;
+}
 
-  waffle = waffle_context_create(config, NULL);
+Replay::Context::Context(waffle_config* config, Context* share_ctx) {
+  if (share_ctx) {
+    waffle = waffle_context_create(config, share_ctx->waffle);
+    r = share_ctx->r;
+  } else {
+    waffle = waffle_context_create(config, nullptr);
+    r = new Resources();
+  }
   assert(waffle);
 }
 
@@ -125,7 +133,7 @@ Replay::Replay(const std::string& path)
 void Replay::capture() {
   GLint current{0};
   glGetIntegerv(GL_RENDERBUFFER_BINDING, &current);
-  for (const auto id : c_->renderbuffer_ids) {
+  for (const auto id : c_->r->renderbuffer_ids) {
     //fprintf(stderr, "id=%ld\n", id);
     glBindRenderbuffer(GL_RENDERBUFFER, id.second);
 
@@ -169,7 +177,8 @@ void Replay::custom_glXCreateContext(const FnGlXCreateContext& fn) {
 }
 
 void Replay::custom_glXCreateContextAttribsARB(const FnGlXCreateContextAttribsARB& fn) {
-  contexts_[fn.return_value] = new Context(config_);
+  contexts_[fn.return_value] = new Context(
+      config_, fn.share_context ? contexts_.at(fn.share_context) : nullptr);
 }
 
 void Replay::custom_glXCreateNewContext(const FnGlXCreateNewContext& fn) {
@@ -177,47 +186,47 @@ void Replay::custom_glXCreateNewContext(const FnGlXCreateNewContext& fn) {
 }
 
 void Replay::custom_glXMakeContextCurrent(const FnGlXMakeContextCurrent& fn) {
-  // if (!fn.ctx) {
-  //   waffle_make_current(display_, window_, nullptr);
-  // } else {
-  //   c_ = contexts_.at(fn.ctx);
-  //   waffle_make_current(display_, window_, c_->waffle);
-  //   fprintf(stderr, "make-current %p\n", c_);
-  // }
+  if (!fn.ctx) {
+    waffle_make_current(display_, window_, nullptr);
+  } else {
+    c_ = contexts_.at(fn.ctx);
+    waffle_make_current(display_, window_, c_->waffle);
+    fprintf(stderr, "make-current %p\n", c_);
+  }
 }
 
 void Replay::custom_glXMakeCurrent(const FnGlXMakeCurrent& fn) {
-  // if (!fn.ctx) {
-  //   waffle_make_current(display_, window_, nullptr);
-  // } else {
-  //   c_ = contexts_.at(fn.ctx);
-  //   waffle_make_current(display_, window_, c_->waffle);
-  //   fprintf(stderr, "make-current %p\n", c_);
-  // }
+  if (!fn.ctx) {
+    waffle_make_current(display_, window_, nullptr);
+  } else {
+    c_ = contexts_.at(fn.ctx);
+    waffle_make_current(display_, window_, c_->waffle);
+    fprintf(stderr, "make-current %p\n", c_);
+  }
 }
 
 void Replay::custom_glCreateProgram(const FnGlCreateProgram& fn) {
   const uint32_t new_id{glCreateProgram()};
-  c_->program_ids[fn.return_value] = new_id;
+  c_->r->program_ids[fn.return_value] = new_id;
 }
 
 void Replay::custom_glCreateShader(const FnGlCreateShader& fn) {
   const uint32_t new_id{glCreateShader(fn.type)};
-  c_->shader_ids[fn.return_value] = new_id;
+  c_->r->shader_ids[fn.return_value] = new_id;
 }
 
 void Replay::custom_glDeleteShader(const FnGlDeleteShader& fn) {
-  glDeleteShader(c_->shader_ids[fn.shader]);
-  c_->shader_ids.erase(fn.shader);
+  glDeleteShader(c_->r->shader_ids[fn.shader]);
+  c_->r->shader_ids.erase(fn.shader);
 }
 
 void Replay::custom_glDeleteProgram(const FnGlDeleteProgram& fn) {
-  glDeleteProgram(c_->program_ids[fn.program]);
-  c_->program_ids.erase(fn.program);
+  glDeleteProgram(c_->r->program_ids.at(fn.program));
+  c_->r->program_ids.erase(fn.program);
 }
 
 void Replay::custom_glAttachShader(const FnGlAttachShader& fn) {
-  glAttachShader(c_->program_ids[fn.program], c_->shader_ids[fn.shader]);
+  glAttachShader(c_->r->program_ids.at(fn.program), c_->r->shader_ids.at(fn.shader));
 }
 
 void Replay::custom_glGenBuffers(const FnGlGenBuffers& fn) {
@@ -226,15 +235,15 @@ void Replay::custom_glGenBuffers(const FnGlGenBuffers& fn) {
   glGenBuffers(fn.buffers_length, new_ids.data());
 
   for (uint32_t i{0}; i < fn.buffers_length; i++) {
-    c_->buffer_ids[fn.buffers[i]] = new_ids[i];
+    c_->r->buffer_ids[fn.buffers[i]] = new_ids[i];
   }
 }
 
 void Replay::custom_glBindBuffer(const FnGlBindBuffer& fn) {
   if (fn.buffer != 0) {
-    assert(c_->buffer_ids[fn.buffer] != 0);
+    assert(c_->r->buffer_ids[fn.buffer] != 0);
   }
-  glBindBuffer(fn.target, c_->buffer_ids[fn.buffer]);
+  glBindBuffer(fn.target, c_->r->buffer_ids[fn.buffer]);
 }
 
 void Replay::custom_glGenTextures(const FnGlGenTextures& fn) {
@@ -244,7 +253,7 @@ void Replay::custom_glGenTextures(const FnGlGenTextures& fn) {
 
   for (uint32_t i{0}; i < fn.textures_length; i++) {
     assert(new_ids[i] != 0);
-    c_->texture_ids[fn.textures[i]] = new_ids[i];
+    c_->r->texture_ids[fn.textures[i]] = new_ids[i];
     fprintf(stderr, "gen-texture %d -> %d\n", fn.textures[i], new_ids[i]);
   }
 }
@@ -252,17 +261,17 @@ void Replay::custom_glGenTextures(const FnGlGenTextures& fn) {
 void Replay::custom_glBindTexture(const FnGlBindTexture& fn) {
   fprintf(stderr, "bind-texture %d\n", fn.texture);
   if (fn.texture != 0) {
-    assert(c_->texture_ids.at(fn.texture) != 0);
+    assert(c_->r->texture_ids.at(fn.texture) != 0);
   }
-  glBindTexture(fn.target, c_->texture_ids.at(fn.texture));
+  glBindTexture(fn.target, c_->r->texture_ids.at(fn.texture));
 }
 
 void Replay::custom_glDeleteTextures(const FnGlDeleteTextures& fn) {
   std::vector<uint32_t> tex_ids;
   for (uint32_t i{0}; i < fn.textures_length; i++) {
     if (fn.textures[i] != 0) {
-      tex_ids.emplace_back(c_->texture_ids.at(fn.textures[i]));
-      c_->texture_ids.erase(fn.textures[i]);
+      tex_ids.emplace_back(c_->r->texture_ids.at(fn.textures[i]));
+      c_->r->texture_ids.erase(fn.textures[i]);
     }
   }
   glDeleteTextures(tex_ids.size(), tex_ids.data());
@@ -274,12 +283,12 @@ void Replay::custom_glGenFramebuffers(const FnGlGenFramebuffers& fn) {
   glGenFramebuffers(fn.framebuffers_length, new_ids.data());
 
   for (uint32_t i{0}; i < fn.framebuffers_length; i++) {
-    c_->framebuffer_ids[fn.framebuffers[i]] = new_ids[i];
+    c_->r->framebuffer_ids[fn.framebuffers[i]] = new_ids[i];
   }
 }
 
 void Replay::custom_glBindFramebuffer(const FnGlBindFramebuffer& fn) {
-  glBindFramebuffer(fn.target, c_->framebuffer_ids[fn.framebuffer]);
+  glBindFramebuffer(fn.target, c_->r->framebuffer_ids[fn.framebuffer]);
 }
 
 void Replay::custom_glGenVertexArrays(const FnGlGenVertexArrays& fn) {
@@ -288,12 +297,12 @@ void Replay::custom_glGenVertexArrays(const FnGlGenVertexArrays& fn) {
   glGenVertexArrays(fn.arrays_length, new_ids.data());
 
   for (uint32_t i{0}; i < fn.arrays_length; i++) {
-    c_->vertex_arrays_ids[fn.arrays[i]] = new_ids[i];
+    c_->r->vertex_arrays_ids[fn.arrays[i]] = new_ids[i];
   }
 }
 
 void Replay::custom_glBindVertexArray(const FnGlBindVertexArray& fn) {
-  glBindVertexArray(c_->vertex_arrays_ids[fn.array]);
+  glBindVertexArray(c_->r->vertex_arrays_ids[fn.array]);
 }
 
 void Replay::custom_glGenRenderbuffers(const FnGlGenRenderbuffers& fn) {
@@ -302,34 +311,34 @@ void Replay::custom_glGenRenderbuffers(const FnGlGenRenderbuffers& fn) {
   glGenRenderbuffers(fn.renderbuffers_length, new_ids.data());
 
   for (uint32_t i{0}; i < fn.renderbuffers_length; i++) {
-    c_->renderbuffer_ids[fn.renderbuffers[i]] = new_ids[i];
+    c_->r->renderbuffer_ids[fn.renderbuffers[i]] = new_ids[i];
   }
 }
 
 void Replay::custom_glBindRenderbuffer(const FnGlBindRenderbuffer& fn) {
-  glBindRenderbuffer(fn.target, c_->renderbuffer_ids[fn.renderbuffer]);
+  glBindRenderbuffer(fn.target, c_->r->renderbuffer_ids[fn.renderbuffer]);
 }
 
 void Replay::custom_glFramebufferTexture2D(const FnGlFramebufferTexture2D& fn) {
   glFramebufferTexture2D(fn.target, fn.attachment,
                          fn.textarget,
-                         c_->texture_ids[fn.texture], fn.level);
+                         c_->r->texture_ids[fn.texture], fn.level);
 }
 
 void Replay::custom_glGenLists(const FnGlGenLists& fn) {
   const auto new_start{glGenLists(fn.range)};
 
   for (int32_t i{0}; i < fn.range; i++) {
-    c_->display_list_ids[fn.return_value + i] = new_start + i;
+    c_->r->display_list_ids[fn.return_value + i] = new_start + i;
   }
 }
 
 void Replay::custom_glNewList(const FnGlNewList& fn) {
-  glNewList(c_->display_list_ids[fn.list], fn.mode);
+  glNewList(c_->r->display_list_ids[fn.list], fn.mode);
 }
 
 void Replay::custom_glCallList(const FnGlCallList& fn) {
-  glCallList(c_->display_list_ids[fn.list]);
+  glCallList(c_->r->display_list_ids[fn.list]);
 }
 
 void Replay::custom_glCompileShader(const FnGlCompileShader& fn) {
