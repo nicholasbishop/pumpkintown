@@ -53,9 +53,15 @@ void check_gl_error() {
 }
 
 Replay::Context::Context(waffle_config* config) {
-  texture_ids[0] = 0;
+  buffer_ids[0] = 0;
+  display_list_ids[0] = 0;
   framebuffer_ids[0] = 0;
+  program_ids[0] = 0;
+  renderbuffer_ids[0] = 0;
+  shader_ids[0] = 0;
+  texture_ids[0] = 0;
   vertex_arrays_ids[0] = 0;
+
   waffle = waffle_context_create(config, NULL);
   assert(waffle);
 }
@@ -303,7 +309,7 @@ void Replay::custom_glBindRenderbuffer(const FnGlBindRenderbuffer& fn) {
 }
 
 void Replay::custom_glFramebufferTexture2D(const FnGlFramebufferTexture2D& fn) {
-  glFramebufferTexture2D(c_->framebuffer_ids[fn.target], fn.attachment,
+  glFramebufferTexture2D(fn.target, fn.attachment,
                          fn.textarget,
                          c_->texture_ids[fn.texture], fn.level);
 }

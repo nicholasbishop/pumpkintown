@@ -240,5 +240,14 @@
   },
   "glGetStringi": {
     "no_replay": true
+  },
+  "glXGetClientString": {
+    "no_replay": true
+  },
+  "glXQueryServerString": {
+    "no_replay": true
+  },
+  "glXGetCurrentContext": {
+    "no_replay": true
   }
 }

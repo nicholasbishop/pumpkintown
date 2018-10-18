@@ -72,14 +72,14 @@ class Replay {
     explicit Context(waffle_config* config);
 
     waffle_context* waffle{nullptr};
-    std::map<uint32_t, uint32_t> shader_ids;
-    std::map<uint32_t, uint32_t> program_ids;
     std::map<uint32_t, uint32_t> buffer_ids;
-    std::map<uint32_t, uint32_t> vertex_arrays_ids;
-    std::map<uint32_t, uint32_t> framebuffer_ids;
-    std::map<uint32_t, uint32_t> texture_ids;
     std::map<uint32_t, uint32_t> display_list_ids;
+    std::map<uint32_t, uint32_t> framebuffer_ids;
+    std::map<uint32_t, uint32_t> program_ids;
     std::map<uint32_t, uint32_t> renderbuffer_ids;
+    std::map<uint32_t, uint32_t> shader_ids;
+    std::map<uint32_t, uint32_t> texture_ids;
+    std::map<uint32_t, uint32_t> vertex_arrays_ids;
   };
   Context* default_context_{nullptr};
   std::map<const void*, Context*> contexts_;
