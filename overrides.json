@@ -129,6 +129,9 @@
     "trace_append": true,
     "custom_replay": true
   },
+  "glEGLImageTargetTexture2DOES": {
+    "trace_append": true
+  },
   "glGenLists": {
     "custom_replay": true
   },
