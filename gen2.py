@@ -81,7 +81,7 @@ def gen_trace_source():
             if func.has_array_params() and not func.custom_io:
                 src.add('  fn.finalize();')
             src.add('  pumpkintown::serialize()->write(fn.num_bytes());')
-            src.add('  fn.write_from_file(pumpkintown::serialize()->file());')
+            src.add('  fn.write_to_file(pumpkintown::serialize()->file());')
             # Prevent double free
             for param in func.params:
                 if param.array:
@@ -195,7 +195,7 @@ def gen_function_structs_header():
         src.add('  uint64_t num_bytes() const;')
         src.add('  std::string to_string() const;')
         src.add('  void read_from_file(FILE* f);')
-        src.add('  void write_from_file(FILE* f);')
+        src.add('  void write_to_file(FILE* f);')
         if func.has_return() and func.return_type.stype:
             src.add('  {} return_value;'.format(func.return_type.stype))
         for param in func.params:
@@ -285,7 +285,7 @@ def gen_function_structs_source():
                 src.add('    {} = nullptr;'.format(param.name))
                 src.add('  }')
         src.add('}')
-        src.add('void {}::write_from_file(FILE* f) {{'.format(func.cxx_struct_name()))
+        src.add('void {}::write_to_file(FILE* f) {{'.format(func.cxx_struct_name()))
         src.add('  write_exact(f, this, sizeof(*this));')
         for param in func.params:
             if param.array:

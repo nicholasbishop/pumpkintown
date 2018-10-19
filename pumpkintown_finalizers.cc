@@ -231,7 +231,7 @@ void FnGlShaderSource::read_from_file(FILE* f) {
   }
 }
 
-void FnGlShaderSource::write_from_file(FILE* f) {
+void FnGlShaderSource::write_to_file(FILE* f) {
   write_exact(f, this, sizeof(*this));
 
   const auto real_lengths{gl_shader_source_lengths(count, length, string)};
