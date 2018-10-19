@@ -6,12 +6,13 @@ from pumpkinpy import trace_reader
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('path')
+    parser.add_argument('trace')
+    parser.add_argument('output')
     args = parser.parse_args()
 
-    reader = trace_reader.TraceReader(args.path)
-    while not reader.done():
-        reader.read_function()
+    reader = trace_reader.TraceReader(args.trace)
+    while True:
+        reader.read_call()
 
 if __name__ == '__main__':
     main()

@@ -187,8 +187,8 @@ def gen_function_structs_header():
     for func in FUNCTIONS:
         if func.is_empty():
             continue
-        # TODO(nicholasbishop): consider packing the struct
-        src.add('struct {} {{'.format(func.cxx_struct_name()))
+        src.add('struct __attribute__((__packed__)) {} {{'.format(
+            func.cxx_struct_name()))
         if func.has_array_params():
             src.add('  ~{}();'.format(func.cxx_struct_name()))
             src.add('  void finalize();')

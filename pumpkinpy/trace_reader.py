@@ -1,23 +1,87 @@
 import struct
+import sys
 
 import attr
+import png
+
+# TODO
+sys.path.append('build')
+import glmeta
 
 @attr.s
 class Call:
-    pass
+    func = attr.ib()
+
+    
+def py_struct_type(stype):
+    return {'const void*': 'Q',
+            'double': 'd',
+            'float': 'f',
+            'int32_t': 'i',
+            'uint8_t': 'B',
+            'uint32_t': 'I',
+            'uint64_t': 'Q',
+    }[stype]
 
 
 class TraceReader:
     def __init__(self, path):
         self._file = open(path, 'rb')
 
-    def done(self):
-        # TODO
-        return False
-
     def read_call(self):
         header = struct.Struct('<HQ')
         buf = self._file.read(header.size)
         function_id, size = header.unpack(buf)
-        print(function_id, size)
-        self._file.read(size)
+        func = glmeta.FUNCTIONS[function_id - 1]
+
+        print(func.name, size)
+
+        if not func.is_replayable():
+            return
+
+        fmt = '<'
+        # Add return value
+        if func.has_return():
+            fmt += py_struct_type(func.return_type.stype)
+        # Add parameters
+        field_names = []
+        for param in func.params:
+            if param.array:
+                field_names += [f'{param.name}_length', param.name]
+                fmt += 'QQ'
+            elif param.offset:
+                field_names.append(param.name)
+                fmt += 'Q'
+            elif param.ptype.stype:
+                field_names.append(param.name)
+                fmt += py_struct_type(param.ptype.stype)
+            else:
+                raise RuntimeError()
+        body = struct.Struct(fmt)
+        buf = self._file.read(body.size)
+        field_values = body.unpack(buf)
+        fields = dict(zip(field_names, field_values))
+
+        if func.custom_io:
+            if func.name == 'glShaderSource':
+                return self.read_shader_source(func, fields)
+
+        for param in func.params:
+            if param.array:
+                elem = struct.Struct(py_struct_type(param.array))
+                buf = self._file.read(elem.size * fields[f'{param.name}_length'])
+                fields[param.name] = list(elem.iter_unpack(buf))
+
+    def read_shader_source(self, func, fields):
+        count = fields['count']
+        if count > 0:
+            elem = struct.Struct('i')
+            buf = self._file.read(count * elem.size)
+            lengths = list(elem.iter_unpack(buf))
+            print(lengths)
+
+            source = ''
+            for length in lengths:
+                source += self._file.read(length[0]).decode('utf-8')[:-1]
+
+            print(source)
