@@ -29,28 +29,28 @@ void trace_append_glLinkProgram(const GLuint program) {
   }
 }
 
-static void check_gl_error() {
+static void check_gl_error(const int line) {
   const auto err = glGetError();
   switch (err) {
     case GL_NO_ERROR:
       break;
     case GL_INVALID_ENUM:
-      fprintf(stderr, "GL error: GL_INVALID_ENUM\n");
+      fprintf(stderr, "GL error(%d): GL_INVALID_ENUM\n", line);
       break;
     case GL_INVALID_VALUE:
-      fprintf(stderr, "GL error: GL_INVALID_VALUE\n");
+      fprintf(stderr, "GL error(%d): GL_INVALID_VALUE\n", line);
       break;
     case GL_INVALID_OPERATION:
-      fprintf(stderr, "GL error: GL_INVALID_OPERATION\n");
+      fprintf(stderr, "GL error(%d): GL_INVALID_OPERATION\n", line);
       break;
     case GL_INVALID_FRAMEBUFFER_OPERATION:
-      fprintf(stderr, "GL error: GL_INVALID_FRAMEBUFFER_OPERATION\n");
+      fprintf(stderr, "GL error(%d): GL_INVALID_FRAMEBUFFER_OPERATION\n", line);
       break;
     case GL_OUT_OF_MEMORY:
-      fprintf(stderr, "GL error: GL_OUT_OF_MEMORY\n");
+      fprintf(stderr, "GL error(%d): GL_OUT_OF_MEMORY\n", line);
       break;
     default:
-      fprintf(stderr, "GL error: %d\n", err);
+      fprintf(stderr, "GL error(%d): %d\n", line, err);
       break;
   }
 }
@@ -68,22 +68,23 @@ void trace_append_glEGLImageTargetTexture2DOES(GLenum target, GLeglImageOES imag
   // TODO: do we need to gen and bind a new texture here?
 
   pumpkintown::real::glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, image);
+  check_gl_error(__LINE__);
 
   GLint orig_tex{0};
   pumpkintown::real::glGetIntegerv(GL_TEXTURE_BINDING_2D, &orig_tex);
-  check_gl_error();
+  check_gl_error(__LINE__);
   if (!orig_tex)
     return;
 
   GLint orig_fbo{0};
   pumpkintown::real::glGetIntegerv(GL_FRAMEBUFFER_BINDING, &orig_fbo);
-  check_gl_error();
+  check_gl_error(__LINE__);
 
   GLuint fbo{0};
   pumpkintown::real::glGenFramebuffers(1, &fbo);
-  check_gl_error();
+  check_gl_error(__LINE__);
   pumpkintown::real::glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-  check_gl_error();
+  check_gl_error(__LINE__);
 
   pumpkintown::real::glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                                             GL_TEXTURE_2D, orig_tex, level);
@@ -95,8 +96,10 @@ void trace_append_glEGLImageTargetTexture2DOES(GLenum target, GLeglImageOES imag
 
   pumpkintown::real::glGetNamedFramebufferParameteriv(
       fbo, GL_FRAMEBUFFER_DEFAULT_WIDTH, &width);
+  check_gl_error(__LINE__);
   pumpkintown::real::glGetNamedFramebufferParameteriv(
       fbo, GL_FRAMEBUFFER_DEFAULT_HEIGHT, &height);
+  check_gl_error(__LINE__);
 
   fprintf(stderr, "%d x %d\n", width, height);
 
