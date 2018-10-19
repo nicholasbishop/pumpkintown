@@ -36,13 +36,15 @@ def load_glinfo(args):
     registry = parse_xml.Registry()
     parse_xml.parse_xml(registry, path1)
     parse_xml.parse_xml(registry, path2)
+    function_id = 1
     for command in registry.commands:
         try:
             rtype = types[command.return_type]
             params = []
             for param in command.params:
                 params.append(Param(name=param.name, ptype=types[param.ptype]))
-            functions.append(Function(command.name, rtype, params))
+            functions.append(Function(function_id, command.name, rtype, params))
+            function_id += 1
         except KeyError as err:
             print(err)
 

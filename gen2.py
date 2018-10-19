@@ -152,10 +152,8 @@ def gen_function_id_header():
     src.add('namespace pumpkintown {')
     src.add('enum class FunctionId : uint16_t {')
     src.add('  Invalid = 0,')
-    # Number each entry to make looking up functions easier during
-    # debugging
-    for index, func in enumerate(FUNCTIONS):
-        src.add('  {} = {},'.format(func.name, index + 1))
+    for func in FUNCTIONS:
+        src.add('  {} = {},'.format(func.name, func.function_id))
     src.add('};')
     src.add('}')
     src.add_guard('PUMPKINTOWN_FUNCTION_ID_HH_')

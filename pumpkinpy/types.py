@@ -34,6 +34,7 @@ class Param:
 
 @attr.s
 class Function:
+    function_id = attr.ib()
     name = attr.ib()
     return_type = attr.ib()
     params = attr.ib()
