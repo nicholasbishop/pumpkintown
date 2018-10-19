@@ -206,6 +206,13 @@
       }
     }
   },
+  "glDrawBuffers": {
+    "params": {
+      "bufs": {
+        "array": "uint32_t"
+      }
+    }
+  },
   "glCreateProgram": {
     "custom_replay": true
   },

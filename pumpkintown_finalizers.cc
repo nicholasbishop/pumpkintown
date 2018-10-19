@@ -69,6 +69,10 @@ void FnGlGenRenderbuffers::finalize() {
   renderbuffers_length = n;
 }
 
+void FnGlDrawBuffers::finalize() {
+  bufs_length = n;
+}
+
 void FnGlBufferData::finalize() {
   if (data) {
     data_length = size;
