@@ -60,12 +60,12 @@ add_library(pumpkintown
 # TODO
 include_directories(/usr/local/include/waffle-1)
 
-add_executable(pumpkintown_texture_dump
-  pumpkintown_deserialize.cc
-  pumpkintown_function_name.cc
-  pumpkintown_gl_util.cc
-  pumpkintown_io.cc
-  pumpkintown_texture_dump.cc)
+# add_executable(pumpkintown_texture_dump
+#   pumpkintown_deserialize.cc
+#   pumpkintown_function_name.cc
+#   pumpkintown_gl_util.cc
+#   pumpkintown_io.cc
+#   pumpkintown_texture_dump.cc)
 
 add_executable(pumpkintown_replay
   pumpkintown_deserialize.cc
