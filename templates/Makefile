@@ -1,0 +1,2 @@
+replay:
+	g++ replay.cc

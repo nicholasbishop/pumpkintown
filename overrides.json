@@ -253,5 +253,14 @@
   },
   "glXGetCurrentContext": {
     "no_replay": true
+  },
+  "glXGetCurrentDisplay": {
+    "no_replay": true
+  },
+  "glXGetCurrentDrawable": {
+    "no_replay": true
+  },
+  "glGetError": {
+    "no_replay": true
   }
 }

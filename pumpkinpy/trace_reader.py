@@ -18,6 +18,7 @@ def py_struct_type(stype):
             'double': 'd',
             'float': 'f',
             'int32_t': 'i',
+            'int64_t': 'q',
             'uint8_t': 'B',
             'uint32_t': 'I',
             'uint64_t': 'Q',
@@ -31,18 +32,22 @@ class TraceReader:
     def read_call(self):
         header = struct.Struct('<HQ')
         buf = self._file.read(header.size)
-        function_id, size = header.unpack(buf)
+        try:
+            function_id, size = header.unpack(buf)
+        except struct.error:
+            raise StopIteration
         func = glmeta.FUNCTIONS[function_id - 1]
 
         if not func.is_replayable():
             return
 
         fmt = '<'
+        field_names = []
         # Add return value
         if func.has_return():
             fmt += py_struct_type(func.return_type.stype)
+            field_names.append('return_value')
         # Add parameters
-        field_names = []
         for param in func.params:
             if param.array:
                 field_names += [f'{param.name}_length', param.name]
