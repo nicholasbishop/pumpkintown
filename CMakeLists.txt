@@ -57,9 +57,6 @@ add_library(pumpkintown
 #   pumpkintown_function_structs.cc
 #   pumpkintown_io.cc)
 
-# TODO
-include_directories(/usr/local/include/waffle-1)
-
 # add_executable(pumpkintown_texture_dump
 #   pumpkintown_deserialize.cc
 #   pumpkintown_function_name.cc

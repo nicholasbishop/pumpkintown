@@ -7,7 +7,7 @@
 #include <unistd.h>
 
 #define WAFFLE_API_VERSION 0x0106
-#include <waffle.h>
+#include <waffle-1/waffle.h>
 
 #include "pumpkintown_deserialize.hh"
 #include "pumpkintown_function_structs.hh"
