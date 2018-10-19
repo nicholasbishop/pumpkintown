@@ -29,6 +29,32 @@ void trace_append_glLinkProgram(const GLuint program) {
   }
 }
 
+static void check_gl_error() {
+  const auto err = glGetError();
+  switch (err) {
+    case GL_NO_ERROR:
+      break;
+    case GL_INVALID_ENUM:
+      fprintf(stderr, "GL error: GL_INVALID_ENUM\n");
+      break;
+    case GL_INVALID_VALUE:
+      fprintf(stderr, "GL error: GL_INVALID_VALUE\n");
+      break;
+    case GL_INVALID_OPERATION:
+      fprintf(stderr, "GL error: GL_INVALID_OPERATION\n");
+      break;
+    case GL_INVALID_FRAMEBUFFER_OPERATION:
+      fprintf(stderr, "GL error: GL_INVALID_FRAMEBUFFER_OPERATION\n");
+      break;
+    case GL_OUT_OF_MEMORY:
+      fprintf(stderr, "GL error: GL_OUT_OF_MEMORY\n");
+      break;
+    default:
+      fprintf(stderr, "GL error: %d\n", err);
+      break;
+  }
+}
+
 void trace_append_glEGLImageTargetTexture2DOES(GLenum target, GLeglImageOES image) {
   const GLint level{0};
   GLint internalformat;
@@ -44,8 +70,12 @@ void trace_append_glEGLImageTargetTexture2DOES(GLenum target, GLeglImageOES imag
   static Fn real_fn = reinterpret_cast<Fn>(get_real_proc_addr("glEGLImageTargetTexture2DOES"));
   real_fn(GL_TEXTURE_2D, image);
 
+  check_gl_error();
+
   glGetTexLevelParameteriv(GL_TEXTURE_2D, level, GL_TEXTURE_WIDTH, &width);
+  check_gl_error();
   glGetTexLevelParameteriv(GL_TEXTURE_2D, level, GL_TEXTURE_HEIGHT, &height);
+  check_gl_error();
   fprintf(stderr, "%d x %d\n", width, height);
 
   // glTexImage2D(target2, level, internalformat, width, height, border,
