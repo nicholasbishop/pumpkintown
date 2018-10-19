@@ -65,8 +65,18 @@ void trace_append_glEGLImageTargetTexture2DOES(GLenum target, GLeglImageOES imag
   //GLenum type;
   //const GLvoid * data;
 
-  // TODO: do we need to gen and bind a new texture here?
+  GLuint rb{0};
+  pumpkintown::real::glGenRenderbuffers(1, &rb);
+  check_gl_error(__LINE__);
+  pumpkintown::real::glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER_OES, image);
+  check_gl_error(__LINE__);
+  glGetRenderbufferParameteriv(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_WIDTH, &width);
+  check_gl_error(__LINE__);
+  glGetRenderbufferParameteriv(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_HEIGHT, &height);
+  check_gl_error(__LINE__);
 
+  // TODO: do we need to gen and bind a new texture here?
+#if 0
   pumpkintown::real::glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, image);
   check_gl_error(__LINE__);
 
@@ -101,8 +111,8 @@ void trace_append_glEGLImageTargetTexture2DOES(GLenum target, GLeglImageOES imag
       fbo, GL_FRAMEBUFFER_DEFAULT_HEIGHT, &height);
   check_gl_error(__LINE__);
 
+#endif
   fprintf(stderr, "%d x %d\n", width, height);
-
   // Bind to the current texture target (TODO, do we need to create a new texture?)
   // using Fn = void (*)(GLenum, GLeglImageOES);
   // static Fn real_fn = reinterpret_cast<Fn>(get_real_proc_addr("glEGLImageTargetTexture2DOES"));
