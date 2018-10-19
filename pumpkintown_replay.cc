@@ -71,7 +71,9 @@ Replay::Context::Context(waffle_config* config, Context* share_ctx) {
     waffle = waffle_context_create(config, nullptr);
     r = new Resources();
   }
-  assert(waffle);
+  if (!waffle) {
+    throw std::runtime_error("waffle_context_create failed");
+  }
 }
 
 Replay::Replay(const std::string& path)
@@ -115,9 +117,13 @@ Replay::Replay(const std::string& path)
   display_ = waffle_display_connect(NULL);
 
   config_ = waffle_config_choose(display_, config_attrs);
-  assert(config_);
+  if (!config_) {
+    throw std::runtime_error("waffle_config_choose failed");
+  }
   window_ = waffle_window_create(config_, window_width, window_height);
-  assert(window_);
+  if (!window_) {
+    throw std::runtime_error("waffle_window_create failed");
+  }
   default_context_ = new Context(config_);
   c_ = default_context_;
 
