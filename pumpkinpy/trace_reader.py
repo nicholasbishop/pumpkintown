@@ -75,7 +75,9 @@ class TraceReader:
                 continue
 
             length = call.fields[f'{param.name}_length']
-            if param.array == 'uint8_t':
+            if length == 0:
+                call.fields[param.name] = None
+            elif param.array == 'uint8_t':
                 call.fields[param.name] = self._file.read(length)
             else:
                 elem = struct.Struct(py_struct_type(param.array))

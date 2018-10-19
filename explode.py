@@ -59,6 +59,8 @@ class Exploder:
             img.save(wfile)
 
     def save_raw(self, prefix, index, data):
+        if not data:
+            return
         name = 'tex_{:04}.raw'.format(index)
         path = os.path.join(self._output, name)
         with open(path, 'wb') as wfile:
@@ -115,8 +117,11 @@ class Exploder:
         self._src.add('  {')
         for param in call.func.params:
             if param.name == 'pixels':
-                self._src.add(f'    const auto vec = read_all("{save_name}");')
-                args.append('vec.data()')
+                if call.fields['pixels_length'] == 0:
+                    args.append('nullptr')
+                else:
+                    self._src.add(f'    const auto vec = read_all("{save_name}");')
+                    args.append('vec.data()')
             else:
                 args.append(str(call.fields[param.name]))
         args = ', '.join(args)
@@ -133,6 +138,10 @@ class Exploder:
         self._src.add(f'    const char* src = reinterpret_cast<const char*>(vec.data());')
         self._src.add(f'    glShaderSource({shader}, 1, &src, nullptr);')
         self._src.add('  }')
+
+    def program_binary(self, call):
+        # TODO
+        pass
 
     def handle_call(self, call):
         if call.func.name in ('glTexSubImage2D', 'glTexImage2D'):
@@ -156,6 +165,8 @@ class Exploder:
             self.buffer_data(call)
         elif call.func.name == 'glShaderSource':
             self.shader_source(call)
+        elif call.func.name == 'glProgramBinary':
+            self.program_binary(call)
         elif call.func.name in ('glXWaitGL', 'glXWaitX',
                                 'glXSwapIntervalMESA'):
             # TODO
@@ -167,7 +178,8 @@ class Exploder:
                 if param.array:
                     arr = f'arr{self._take_id()}'
                     length = call.fields[f'{param.name}_length']
-                    self._src.add(f'  {param.array} {arr}[{length}];')
+                    init = ', '.join(str(elem) for elem in field)
+                    self._src.add(f'  const {param.array} {arr}[{length}] = {{{init}}};')
                     args.append(arr)
                 elif param.offset:
                     args.append(f'(const void*){field}')
@@ -175,9 +187,12 @@ class Exploder:
                     args.append(str(field))
             args = ', '.join(args)
             self._src.add(f'  {call.func.name}({args});')
+        # Sleep for a little bit to make replays easier to see
+        self._src.add('  usleep(100);')
 
     def explode(self):
         self._src.add_cxx_include('vector', system=True)
+        self._src.add_cxx_include('unistd.h', system=True)
         self._src.add_cxx_include('epoxy/gl.h', system=True)
         self._src.add_cxx_include('waffle-1/waffle.h', system=True)
         self._src.add_cxx_include('replay.hh')
