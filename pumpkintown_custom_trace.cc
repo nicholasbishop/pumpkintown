@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "pumpkintown_dlib.hh"
 #include "pumpkintown_gl_enum.hh"
 #include "pumpkintown_trace.hh"
 
