@@ -98,7 +98,6 @@ void Deserialize::advance(uint64_t num_bytes) {
   }
   long offset = num_bytes;
   if (fseek(file_, offset, SEEK_CUR) != 0) {
-    printf("error: %d\n", errno);
     throw std::runtime_error("seek failed");
   }
 }
