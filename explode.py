@@ -31,17 +31,17 @@ class Context:
 
 class Exploder:
     def __init__(self, trace, output):
-        self._output = output
-        self._png_index = 0
-        self._reader = trace_reader.TraceReader(trace)
-        self._src = Source()
-        self._context_map = {}
-        self._next_id = 0
-        self._ctx = None
+        self.output = output
+        self.png_index = 0
+        self.reader = trace_reader.TraceReader(trace)
+        self.src = Source()
+        self.context_map = {}
+        self.next_id = 0
+        self.ctx = None
 
-    def _take_id(self):
-        nid = self._next_id
-        self._next_id += 1
+    def take_id(self):
+        nid = self.next_id
+        self.next_id += 1
         return nid
 
     def save_texture_png(self, call):
@@ -62,8 +62,8 @@ class Exploder:
 
         img = PIL.Image.frombytes(mode, size, pixels, decoder_name='raw')
 
-        path = os.path.join(self._output, 'tex_{:04}.png'.format(self._png_index))
-        self._png_index += 1
+        path = os.path.join(self.output, 'tex_{:04}.png'.format(self.png_index))
+        self.png_index += 1
 
         with open(path, 'wb') as wfile:
             img.save(wfile)
@@ -72,38 +72,38 @@ class Exploder:
         if not data:
             return
         name = 'tex_{:04}.raw'.format(index)
-        path = os.path.join(self._output, name)
+        path = os.path.join(self.output, name)
         with open(path, 'wb') as wfile:
             wfile.write(data)
         return path
 
     def create_context(self, call):
-        var = f'ctx{self._take_id()}'
+        var = f'ctx{self.take_id()}'
         orig_share_ctx = call.fields.get('share_context')
         share_ctx = 'nullptr'
         if orig_share_ctx:
-            share_ctx = self._context_map[orig_share_ctx].var
-            res = self._context_map[orig_share_ctx].res
+            share_ctx = self.context_map[orig_share_ctx].var
+            res = self.context_map[orig_share_ctx].res
         else:
             res = Resources()
-        self._src.add(f'  auto {var} = waffle_context_create(config, {share_ctx});')
-        self._context_map[call.fields['return_value']] = Context(var, res)
+        self.src.add(f'  auto {var} = waffle_context_create(config, {share_ctx});')
+        self.context_map[call.fields['return_value']] = Context(var, res)
 
     def make_context_current(self, call):
         orig_ctx = call.fields['ctx']
         if orig_ctx == 0:
             context = 'nullptr'
-            self._ctx = None
+            self.ctx = None
         else:
-            context = self._context_map[orig_ctx].var
-            self._ctx = self._context_map[orig_ctx]
-        self._src.add(f'  waffle_make_current(display, window, {context});')
+            context = self.context_map[orig_ctx].var
+            self.ctx = self.context_map[orig_ctx]
+        self.src.add(f'  waffle_make_current(display, window, {context});')
 
     def standard_gen(self, call):
         count = call.fields['n']
-        var = f'id{self._take_id()}'
-        self._src.add(f'  GLuint {var}[{count}] = {{0}};')
-        self._src.add(f'  {call.func.name}({count}, {var});')
+        var = f'id{self.take_id()}'
+        self.src.add(f'  GLuint {var}[{count}] = {{0}};')
+        self.src.add(f'  {call.func.name}({count}, {var});')
 
     def standard_delete(self, call):
         # TODO
@@ -111,59 +111,59 @@ class Exploder:
 
     # TODO dedup with tex_image
     def buffer_data(self, call):
-        index = self._take_id()
+        index = self.take_id()
         save_name = self.save_raw('buf_', index, call.fields['data'])
         args = []
-        self._src.add('  {')
+        self.src.add('  {')
         for param in call.func.params:
             if param.name == 'data':
-                self._src.add(f'    const auto vec = read_all("{save_name}");')
+                self.src.add(f'    const auto vec = read_all("{save_name}");')
                 args.append('vec.data()')
             else:
                 args.append(str(call.fields[param.name]))
         args = ', '.join(args)
-        self._src.add(f'    {call.func.name}({args});')
-        self._src.add('  }')
+        self.src.add(f'    {call.func.name}({args});')
+        self.src.add('  }')
 
     def tex_image(self, call):
-        index = self._take_id()
+        index = self.take_id()
         save_name = self.save_raw('tex_', index, call.fields['pixels'])
         args = []
-        self._src.add('  {')
+        self.src.add('  {')
         for param in call.func.params:
             if param.name == 'pixels':
                 if call.fields['pixels_length'] == 0:
                     args.append('nullptr')
                 else:
-                    self._src.add(f'    const auto vec = read_all("{save_name}");')
+                    self.src.add(f'    const auto vec = read_all("{save_name}");')
                     args.append('vec.data()')
             else:
                 args.append(str(call.fields[param.name]))
         args = ', '.join(args)
-        self._src.add(f'    {call.func.name}({args});')
-        self._src.add('  }')
+        self.src.add(f'    {call.func.name}({args});')
+        self.src.add('  }')
 
     def shader_source(self, call):
-        index = self._take_id()
+        index = self.take_id()
         save_path = self.save_raw('tex_', index,
                                   call.fields['source'].encode('utf-8'))
         shader = call.fields['shader']
-        self._src.add('  {')
-        self._src.add(f'    const auto vec = read_all("{save_path}");')
-        self._src.add(f'    const char* src = reinterpret_cast<const char*>(vec.data());')
-        self._src.add(f'    glShaderSource({shader}, 1, &src, nullptr);')
-        self._src.add('  }')
+        self.src.add('  {')
+        self.src.add(f'    const auto vec = read_all("{save_path}");')
+        self.src.add(f'    const char* src = reinterpret_cast<const char*>(vec.data());')
+        self.src.add(f'    glShaderSource({shader}, 1, &src, nullptr);')
+        self.src.add('  }')
 
     def program_binary(self, call):
-        index = self._take_id()
+        index = self.take_id()
         save_path = self.save_raw('program_', index, call.fields['binary'])
-        self._src.add('  {')
-        self._src.add(f'    const auto vec = read_all("{save_path}");')
+        self.src.add('  {')
+        self.src.add(f'    const auto vec = read_all("{save_path}");')
         fmt = call.fields['binaryFormat']
         length = call.fields['length']
-        program = self._ctx.res.programs[call.fields['program']]
-        self._src.add(f'    glProgramBinary({program}, {fmt}, vec.data(), {length});')
-        self._src.add('  }')
+        program = self.ctx.res.programs[call.fields['program']]
+        self.src.add(f'    glProgramBinary({program}, {fmt}, vec.data(), {length});')
+        self.src.add('  }')
 
     def standard_create(self, call):
         prefix = 'glCreate'
@@ -172,19 +172,19 @@ class Exploder:
         for param in call.func.params:
             args.append(str(call.fields[param.name]))
         args = ', '.join(args)
-        var = f'{name}{self._take_id()}'
-        self._src.add(f'  const auto {var} = {call.func.name}({args});')
-        self._ctx.res[name][call.return_value] = var
+        var = f'{name}{self.take_id()}'
+        self.src.add(f'  const auto {var} = {call.func.name}({args});')
+        self.ctx.res[name][call.return_value] = var
 
     def use_program(self, call):
         program = call.fields['program']
         if program != 0:
-            program = self._ctx.res.programs[program]
-        self._src.add(f'  glUseProgram({program});')
+            program = self.ctx.res.programs[program]
+        self.src.add(f'  glUseProgram({program});')
 
     def handle_call(self, call):
         name = call.func.name
-        self._src.add(f'  fprintf(stderr, "{name}\\n");')
+        self.src.add(f'  fprintf(stderr, "{name}\\n");')
 
         if name in ('glTexSubImage2D', 'glTexImage2D'):
             # TODO
@@ -222,39 +222,39 @@ class Exploder:
             for param in call.func.params:
                 field = call.fields[param.name]
                 if param.array:
-                    arr = f'arr{self._take_id()}'
+                    arr = f'arr{self.take_id()}'
                     length = call.fields[f'{param.name}_length']
                     init = ', '.join(str(elem) for elem in field)
-                    self._src.add(f'  const {param.array} {arr}[{length}] = {{{init}}};')
+                    self.src.add(f'  const {param.array} {arr}[{length}] = {{{init}}};')
                     args.append(arr)
                 elif param.offset:
                     args.append(f'(const void*){field}')
                 else:
                     args.append(str(field))
             args = ', '.join(args)
-            self._src.add(f'  {name}({args});')
-        self._src.add('  check_gl_error();')
+            self.src.add(f'  {name}({args});')
+        self.src.add('  check_gl_error();')
 
     def explode(self):
-        self._src.add_cxx_include('vector', system=True)
-        self._src.add_cxx_include('epoxy/gl.h', system=True)
-        self._src.add_cxx_include('waffle-1/waffle.h', system=True)
-        self._src.add_cxx_include('replay.hh')
-        self._src.add('void draw(waffle_display* display, waffle_window* window, waffle_config* config) {')
+        self.src.add_cxx_include('vector', system=True)
+        self.src.add_cxx_include('epoxy/gl.h', system=True)
+        self.src.add_cxx_include('waffle-1/waffle.h', system=True)
+        self.src.add_cxx_include('replay.hh')
+        self.src.add('void draw(waffle_display* display, waffle_window* window, waffle_config* config) {')
 
         try:
             while True:
-                call = self._reader.read_call()
+                call = self.reader.read_call()
                 if call:
                     self.handle_call(call)
         except StopIteration:
             pass
 
-        self._src.add('}')
+        self.src.add('}')
 
-        path = os.path.join(self._output, 'draw.cc')
+        path = os.path.join(self.output, 'draw.cc')
         with open(path, 'w') as wfile:
-            wfile.write(self._src.text())
+            wfile.write(self.src.text())
 
 
 def main():
