@@ -78,20 +78,29 @@ Replay::Context::Context(waffle_config* config, Context* share_ctx) {
 
 Replay::Replay(const std::string& path)
     : iter_{path} {
+  int32_t platform = WAFFLE_PLATFORM_GLX;
+  int32_t api = WAFFLE_CONTEXT_OPENGL;
+  int32_t major = 4;
+  int32_t minor = 5;
+
+  if (strcmp(getenv("PUMPKINTOWN_PLATFORM"), "chromeos") == 0) {
+    printf("platform: chromeos\n");
+    platform = 0x0019;  // "NULL" platform defined in CrOS's fork
+    api = WAFFLE_CONTEXT_OPENGL_ES2;
+    major = 2;
+    minor = 0;
+  }
+
   const int32_t init_attrs[] = {
-    WAFFLE_PLATFORM, WAFFLE_PLATFORM_GLX,
+    WAFFLE_PLATFORM, platform,
     0,
   };
 
   const int32_t config_attrs[] = {
-    WAFFLE_CONTEXT_API,         WAFFLE_CONTEXT_OPENGL,
+    WAFFLE_CONTEXT_API,         api,
 
-#if 1
-    WAFFLE_CONTEXT_MAJOR_VERSION, 4,
-    WAFFLE_CONTEXT_MINOR_VERSION, 5,
-
-    //WAFFLE_CONTEXT_PROFILE,  WAFFLE_CONTEXT_COMPATIBILITY_PROFILE,
-#endif
+    WAFFLE_CONTEXT_MAJOR_VERSION, major,
+    WAFFLE_CONTEXT_MINOR_VERSION, minor,
 
     WAFFLE_RED_SIZE,            8,
     WAFFLE_BLUE_SIZE,           8,
@@ -104,9 +113,6 @@ Replay::Replay(const std::string& path)
 
          
     WAFFLE_DOUBLE_BUFFERED, false,
-
-    //WAFFLE_CONTEXT_DEBUG, true,
-
     0,
   };
 
