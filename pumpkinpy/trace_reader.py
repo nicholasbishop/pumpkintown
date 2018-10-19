@@ -2,7 +2,6 @@ import struct
 import sys
 
 import attr
-import png
 
 # TODO
 sys.path.append('build')
@@ -67,10 +66,16 @@ class TraceReader:
                 return self.read_shader_source(call)
 
         for param in func.params:
-            if param.array:
+            if not param.array:
+                continue
+
+            length = call.fields[f'{param.name}_length']
+            if param.array == 'uint8_t':
+                call.fields[param.name] = self._file.read(length)
+            else:
                 elem = struct.Struct(py_struct_type(param.array))
-                buf = self._file.read(elem.size * call.fields[f'{param.name}_length'])
-                call.fields[param.name] = list(elem.iter_unpack(buf))
+                buf = self._file.read(elem.size * length)
+                call.fields[param.name] = list(item[0] for item in elem.iter_unpack(buf))
 
         return call
 

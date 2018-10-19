@@ -97,6 +97,8 @@ def main():
         for key, value in enums.items():
             src.add(f'  \'{key}\': {value},')
         src.add('}')
+        for key, value in enums.items():
+            src.add(f'{key} = {value}')
         wfile.write(src.text())
 
 
