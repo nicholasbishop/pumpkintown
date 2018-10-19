@@ -4,6 +4,11 @@
 
 https://github.com/waffle-gl/waffle.git
 
+### Python3
+
+- attrs
+- purepng
+
 ## Building
 
     git submodule update --init
@@ -14,4 +19,5 @@ https://github.com/waffle-gl/waffle.git
 The format is currently very simple and will absolutely change.
 
 The file represents an array of function calls. Each call starts with
-a 32-bit function ID. TODO: parameter encoding
+a 16-bit function ID, followed by a 64-bit length field. TODO:
+parameter encoding
