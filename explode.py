@@ -233,13 +233,10 @@ class Exploder:
                     args.append(str(field))
             args = ', '.join(args)
             self._src.add(f'  {name}({args});')
-        # Sleep for a little bit to make replays easier to see
-        #self._src.add('  usleep(100);')
         self._src.add('  check_gl_error();')
 
     def explode(self):
         self._src.add_cxx_include('vector', system=True)
-        self._src.add_cxx_include('unistd.h', system=True)
         self._src.add_cxx_include('epoxy/gl.h', system=True)
         self._src.add_cxx_include('waffle-1/waffle.h', system=True)
         self._src.add_cxx_include('replay.hh')
