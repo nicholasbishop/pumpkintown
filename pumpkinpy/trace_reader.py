@@ -11,6 +11,7 @@ import glmeta
 class Call:
     func = attr.ib()
     fields = attr.ib()
+    return_value = attr.ib(default=None)
 
     
 def py_struct_type(stype):
@@ -65,6 +66,8 @@ class TraceReader:
         field_values = body.unpack(buf)
 
         call = Call(func, dict(zip(field_names, field_values)))
+        if 'return_value' in call.fields:
+            call.return_value = call.fields['return_value']
 
         if func.custom_io:
             if func.name == 'glShaderSource':
