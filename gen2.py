@@ -38,6 +38,12 @@ def gen_trace_header():
     src.add('#define PUMPKINTOWN_GL_GEN_HH_')
     src.add_cxx_include('pumpkintown_gl_types.hh')
     src.add(gen_exports())
+    src.add('namespace pumpkintown {')
+    src.add('namespace real {')
+    for func in FUNCTIONS:
+        src.add(func.cxx_prototype())
+    src.add('}')
+    src.add('}')
     src.add('#endif')
     return src
 
@@ -52,14 +58,12 @@ def gen_trace_source():
     src.add_cxx_include('pumpkintown_serialize.hh')
     for func in FUNCTIONS:
         src.add('{} {{'.format(func.cxx_decl()))
-        src.add('  ' + func.cxx_function_type_alias())
         if False:
             src.add('  fprintf(stderr, "{}\\n");'.format(func.name))
-        # Static function pointer to the "real" call
-        src.add('  static Fn real_fn = reinterpret_cast<Fn>(get_real_proc_addr("{}"));'.format(func.name))
-        # Call the real function
-        src.add('  {}real_fn({});'.format(
+        # Call the real function and capture its return value if it has one
+        src.add('  {}pumpkintown::real::{}({});'.format(
             'auto return_value = ' if func.has_return() else '',
+            func.name,
             ', '.join(param.name for param in func.params)))
         # Optional custom actions
         if func.trace_append:
@@ -102,6 +106,22 @@ def gen_trace_source():
     src.add('}')
     src.add('extern "C" void* glXGetProcAddressARB(const char* name) {')
     src.add('  return glXGetProcAddress(name);')
+    src.add('}')
+    # Add pumpkintown::real:: implementations
+    src.add('namespace pumpkintown {')
+    src.add('namespace real {')
+    for func in FUNCTIONS:
+        src.add('{} {{'.format(func.cxx_decl()))
+        # Declare Function pointer type
+        src.add('  ' + func.cxx_function_type_alias())
+        # Static function pointer to the "real" call
+        src.add('  static Fn real_fn = reinterpret_cast<Fn>(get_real_proc_addr("{}"));'.format(func.name))
+        # Call the real function and return its value if it has one
+        src.add('  {}real_fn({});'.format(
+            'return ' if func.has_return() else '',
+            ', '.join(param.name for param in func.params)))
+        src.add('}')
+    src.add('}')
     src.add('}')
     return src
 
