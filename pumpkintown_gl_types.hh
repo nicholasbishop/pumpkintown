@@ -1,5 +1,3 @@
-// Copyright 2018 Neverware
-
 #ifndef PUMPKINTOWN_GL_TYPES_HH_
 #define PUMPKINTOWN_GL_TYPES_HH_
 

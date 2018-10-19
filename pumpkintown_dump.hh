@@ -1,5 +1,3 @@
-// Copyright 2018 Neverware
-
 #ifndef PUMPKINTOWN_DUMP_HH_
 #define PUMPKINTOWN_DUMP_HH_
 
