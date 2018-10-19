@@ -135,6 +135,9 @@ def gen_gl_enum_source():
     src.add('const char* lookup_gl_enum_string(const int64_t val) {')
     src.add('  switch(val) {')
     for value, names in enum_map.items():
+        # Skip GL_TIMEOUT_IGNORED, it's too big for an int64_t
+        if value >= 0xffffffffffffffff:
+            continue
         if value >= 0:
             value = '0x{:x}'.format(value)
         src.add('  case {}:'.format(value))
