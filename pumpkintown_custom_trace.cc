@@ -1,6 +1,7 @@
 #include "pumpkintown_custom_trace.hh"
 
 #include <string>
+#include <vector>
 
 #include "pumpkintown_dlib.hh"
 #include "pumpkintown_gl_enum.hh"
@@ -74,6 +75,28 @@ void trace_append_glEGLImageTargetTexture2DOES(GLenum target, GLeglImageOES imag
   glGetRenderbufferParameteriv(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_WIDTH, &width);
   check_gl_error(__LINE__);
   glGetRenderbufferParameteriv(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_HEIGHT, &height);
+  check_gl_error(__LINE__);
+
+  GLuint fbo{0};
+  pumpkintown::real::glGenFramebuffers(1, &fbo);
+  check_gl_error(__LINE__);
+  pumpkintown::real::glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  check_gl_error(__LINE__);
+
+  pumpkintown::real::glFramebufferRenderbuffer(
+      GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER_OES, rb);
+  check_gl_error(__LINE__);
+
+  const auto status = pumpkintown::real::glCheckFramebufferStatus(GL_FRAMEBUFFER);
+  if (status != GL_FRAMEBUFFER_COMPLETE) {
+    fprintf(stderr, "GL error, framebuffer status=%d\n", status);
+    return;
+  }
+
+  std::vector<uint8_t> pixels;
+  pixels.resize(width * height * 4);
+  pumpkintown::real::glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE,
+                                  pixels.data());
   check_gl_error(__LINE__);
 
   // TODO: do we need to gen and bind a new texture here?
