@@ -269,5 +269,14 @@
   },
   "glGetError": {
     "no_replay": true
+  },
+  "glGetShaderPrecisionFormat": {
+    "no_replay": true
+  },
+  "glGetInternalformativ": {
+    "no_replay": true
+  },
+  "glGetFloatv": {
+    "no_replay": true
   }
 }
