@@ -67,6 +67,7 @@ void trace_append_glEGLImageTargetTexture2DOES(GLenum target, GLeglImageOES imag
 
   GLuint rb{0};
   pumpkintown::real::glGenRenderbuffers(1, &rb);
+  pumpkintown::real::glBindRenderbuffer(rb);
   check_gl_error(__LINE__);
   pumpkintown::real::glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER_OES, image);
   check_gl_error(__LINE__);
