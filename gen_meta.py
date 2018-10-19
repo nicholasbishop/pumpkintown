@@ -91,14 +91,14 @@ def main():
         src.add('from pumpkinpy.types import Function, Param, Type')
         src.add('FUNCTIONS = (')
         for func in functions:
-            src.add(f'  {func},')
+            src.add('  {},'.format(func))
         src.add(')')
         src.add('ENUMS = {')
         for key, value in enums.items():
-            src.add(f'  \'{key}\': {value},')
+            src.add("  '{}': {}".format(key, value))
         src.add('}')
         for key, value in enums.items():
-            src.add(f'{key} = {value}')
+            src.add('{} = {}'.format(key, value))
         wfile.write(src.text())
 
 
