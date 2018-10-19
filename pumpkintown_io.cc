@@ -9,7 +9,7 @@ void read_exact(FILE* f, void* dst, uint64_t const num_bytes) {
   uint8_t* buf = reinterpret_cast<uint8_t*>(dst);
   uint64_t bytes_remaining = num_bytes;
   while (bytes_remaining > 0) {
-    uint64_t bytes_read = fread(dst, 1, bytes_remaining, f);
+    uint64_t bytes_read = fread(buf, 1, bytes_remaining, f);
     if (bytes_read == 0) {
       throw std::runtime_error("read failed");
     }

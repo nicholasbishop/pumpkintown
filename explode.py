@@ -59,14 +59,18 @@ class Exploder:
             img.save(wfile)
 
     def save_raw(self, prefix, index, data):
-        path = os.path.join(self._output, 'tex_{:04}.raw'.format(index))
+        name = 'tex_{:04}.raw'.format(index)
+        path = os.path.join(self._output, name)
         with open(path, 'wb') as wfile:
             wfile.write(data)
+        return path
 
     def create_context(self, call):
         var = f'ctx{self._take_id()}'
-        # TODO
+        orig_share_ctx = call.fields.get('share_ctx')
         share_ctx = 'nullptr'
+        if orig_share_ctx:
+            share_ctx = self._context_map[orig_share_ctx]
         self._src.add(f'  auto {var} = waffle_context_create(config, {share_ctx});')
         self._context_map[call.fields['return_value']] = Context(var)
 
@@ -91,13 +95,12 @@ class Exploder:
     # TODO dedup with tex_image
     def buffer_data(self, call):
         index = self._take_id()
-        self.save_raw('buf_', index, call.fields['data'])
+        save_name = self.save_raw('buf_', index, call.fields['data'])
         args = []
         self._src.add('  {')
         for param in call.func.params:
             if param.name == 'data':
-                self._src.add('    std::vector<uint8_t> vec;')
-                # TODO load the data from a file
+                self._src.add(f'    const auto vec = read_all("{save_name}");')
                 args.append('vec.data()')
             else:
                 args.append(str(call.fields[param.name]))
@@ -107,18 +110,28 @@ class Exploder:
 
     def tex_image(self, call):
         index = self._take_id()
-        self.save_raw('tex_', index, call.fields['pixels'])
+        save_name = self.save_raw('tex_', index, call.fields['pixels'])
         args = []
         self._src.add('  {')
         for param in call.func.params:
             if param.name == 'pixels':
-                self._src.add('    std::vector<uint8_t> vec;')
-                # TODO load the data from a file
+                self._src.add(f'    const auto vec = read_all("{save_name}");')
                 args.append('vec.data()')
             else:
                 args.append(str(call.fields[param.name]))
         args = ', '.join(args)
         self._src.add(f'    {call.func.name}({args});')
+        self._src.add('  }')
+
+    def shader_source(self, call):
+        index = self._take_id()
+        save_path = self.save_raw('tex_', index,
+                                  call.fields['source'].encode('utf-8'))
+        shader = call.fields['shader']
+        self._src.add('  {')
+        self._src.add(f'    const auto vec = read_all("{save_path}");')
+        self._src.add(f'    const char* src = reinterpret_cast<const char*>(vec.data());')
+        self._src.add(f'    glShaderSource({shader}, 1, &src, nullptr);')
         self._src.add('  }')
 
     def handle_call(self, call):
@@ -137,21 +150,29 @@ class Exploder:
             self.standard_gen(call)
         elif call.func.name in ('glDeleteTextures',):
             self.standard_delete(call)
-        elif call.func.name == 'glTexImage2D':
+        elif call.func.name in ('glTexImage2D', 'glTexSubImage2D'):
             self.tex_image(call)
         elif call.func.name == 'glBufferData':
             self.buffer_data(call)
-        elif call.func.name in ('glXWaitGL', 'glXWaitX'):
+        elif call.func.name == 'glShaderSource':
+            self.shader_source(call)
+        elif call.func.name in ('glXWaitGL', 'glXWaitX',
+                                'glXSwapIntervalMESA'):
             # TODO
             pass
         else:
             args = []
             for param in call.func.params:
+                field = call.fields[param.name]
                 if param.array:
-                    # TODO
-                    args.append('todo')
-                    continue
-                args.append(str(call.fields[param.name]))
+                    arr = f'arr{self._take_id()}'
+                    length = call.fields[f'{param.name}_length']
+                    self._src.add(f'  {param.array} {arr}[{length}];')
+                    args.append(arr)
+                elif param.offset:
+                    args.append(f'(const void*){field}')
+                else:
+                    args.append(str(field))
             args = ', '.join(args)
             self._src.add(f'  {call.func.name}({args});')
 
@@ -159,6 +180,7 @@ class Exploder:
         self._src.add_cxx_include('vector', system=True)
         self._src.add_cxx_include('epoxy/gl.h', system=True)
         self._src.add_cxx_include('waffle-1/waffle.h', system=True)
+        self._src.add_cxx_include('replay.hh')
         self._src.add('void draw(waffle_display* display, waffle_window* window, waffle_config* config) {')
 
         try:
@@ -171,7 +193,7 @@ class Exploder:
 
         self._src.add('}')
 
-        path = os.path.join(self._output, 'replay.cc')
+        path = os.path.join(self._output, 'draw.cc')
         with open(path, 'w') as wfile:
             wfile.write(self._src.text())
 
@@ -186,6 +208,8 @@ def main():
     exploder.explode()
 
     shutil.copy('templates/Makefile', args.output)
+    shutil.copy('templates/replay.cc', args.output)
+    shutil.copy('templates/replay.hh', args.output)
     
 
 if __name__ == '__main__':
