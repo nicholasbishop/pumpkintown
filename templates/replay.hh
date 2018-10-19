@@ -13,4 +13,6 @@ void draw(waffle_display* display, waffle_window* window, waffle_config* config)
 
 std::vector<uint8_t> read_all(const std::string& path);
 
+void check_gl_error();
+
 #endif  // TEMPLATES_REPLAY_HH_

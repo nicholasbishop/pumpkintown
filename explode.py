@@ -144,30 +144,33 @@ class Exploder:
         pass
 
     def handle_call(self, call):
-        if call.func.name in ('glTexSubImage2D', 'glTexImage2D'):
+        name = call.func.name
+        self._src.add(f'  fprintf(stderr, "{name}\\n");')
+
+        if name in ('glTexSubImage2D', 'glTexImage2D'):
             # TODO
             # self.save_texture_png(call)
             pass
 
-        if call.func.name in ('glXCreateNewContext', 'glXCreateContextAttribsARB'):
+        if name in ('glXCreateNewContext', 'glXCreateContextAttribsARB'):
             self.create_context(call)
-        elif call.func.name == 'glXMakeContextCurrent':
+        elif name == 'glXMakeContextCurrent':
             self.make_context_current(call)
-        elif call.func.name in ('glGenBuffers', 'glGenTextures',
-                                'glGenFramebuffers', 'glGenVertexArrays',
-                                'glGenRenderbuffers'):
+        elif name in ('glGenBuffers', 'glGenTextures',
+                      'glGenFramebuffers', 'glGenVertexArrays',
+                      'glGenRenderbuffers'):
             self.standard_gen(call)
-        elif call.func.name in ('glDeleteTextures',):
+        elif name in ('glDeleteTextures',):
             self.standard_delete(call)
-        elif call.func.name in ('glTexImage2D', 'glTexSubImage2D'):
+        elif name in ('glTexImage2D', 'glTexSubImage2D'):
             self.tex_image(call)
-        elif call.func.name == 'glBufferData':
+        elif name == 'glBufferData':
             self.buffer_data(call)
-        elif call.func.name == 'glShaderSource':
+        elif name == 'glShaderSource':
             self.shader_source(call)
-        elif call.func.name == 'glProgramBinary':
+        elif name == 'glProgramBinary':
             self.program_binary(call)
-        elif call.func.name in ('glXWaitGL', 'glXWaitX',
+        elif name in ('glXWaitGL', 'glXWaitX',
                                 'glXSwapIntervalMESA'):
             # TODO
             pass
@@ -186,9 +189,10 @@ class Exploder:
                 else:
                     args.append(str(field))
             args = ', '.join(args)
-            self._src.add(f'  {call.func.name}({args});')
+            self._src.add(f'  {name}({args});')
         # Sleep for a little bit to make replays easier to see
-        self._src.add('  usleep(100);')
+        #self._src.add('  usleep(100);')
+        self._src.add('  check_gl_error();')
 
     def explode(self):
         self._src.add_cxx_include('vector', system=True)

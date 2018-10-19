@@ -1,6 +1,7 @@
 #include <cassert>
 #include <stdexcept>
 
+#include <epoxy/gl.h>
 #include <waffle-1/waffle.h>
 
 #include "replay.hh"
@@ -29,6 +30,32 @@ std::vector<uint8_t> read_all(const std::string& path) {
   }
 
   return vec;
+}
+
+void check_gl_error() {
+  const auto err = glGetError();
+  switch (err) {
+    case GL_NO_ERROR:
+      break;
+    case GL_INVALID_ENUM:
+      fprintf(stderr, "GL error: GL_INVALID_ENUM\n");
+      break;
+    case GL_INVALID_VALUE:
+      fprintf(stderr, "GL error: GL_INVALID_VALUE\n");
+      break;
+    case GL_INVALID_OPERATION:
+      fprintf(stderr, "GL error: GL_INVALID_OPERATION\n");
+      break;
+    case GL_INVALID_FRAMEBUFFER_OPERATION:
+      fprintf(stderr, "GL error: GL_INVALID_FRAMEBUFFER_OPERATION\n");
+      break;
+    case GL_OUT_OF_MEMORY:
+      fprintf(stderr, "GL error: GL_OUT_OF_MEMORY\n");
+      break;
+    default:
+      fprintf(stderr, "GL error: %d\n", err);
+      break;
+  }
 }
 
 int main() {
