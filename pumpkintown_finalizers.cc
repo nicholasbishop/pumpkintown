@@ -199,7 +199,7 @@ static std::vector<int32_t> gl_shader_source_lengths(
 uint64_t FnGlShaderSource::num_bytes() const {
   uint64_t total{sizeof(*this) + (count * sizeof(int32_t))};
 
-  const auto real_lengths{gl_shader_source_lengths(count, length, string)};
+  const auto real_lengths = gl_shader_source_lengths(count, length, string);
   for (const auto len : real_lengths) {
     total += len;
   }
@@ -238,7 +238,7 @@ void FnGlShaderSource::read_from_file(FILE* f) {
 void FnGlShaderSource::write_to_file(FILE* f) {
   write_exact(f, this, sizeof(*this));
 
-  const auto real_lengths{gl_shader_source_lengths(count, length, string)};
+  const auto real_lengths = gl_shader_source_lengths(count, length, string);
 
   write_exact(f, real_lengths.data(), count * sizeof(int32_t));
   for (int32_t i{0}; i < count; i++) {

@@ -334,7 +334,7 @@ void Replay::custom_glFramebufferTexture2D(const FnGlFramebufferTexture2D& fn) {
 }
 
 void Replay::custom_glGenLists(const FnGlGenLists& fn) {
-  const auto new_start{glGenLists(fn.range)};
+  const auto new_start = glGenLists(fn.range);
 
   for (int32_t i{0}; i < fn.range; i++) {
     c_->r->display_list_ids[fn.return_value + i] = new_start + i;
