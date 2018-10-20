@@ -415,7 +415,7 @@ int main(int argc, char** argv) {
   // waffle_config_destroy(config);
   // waffle_display_disconnect(dpy);
 
-  waffle_teardown();
+  // waffle_teardown();
 
   return 0;
 }
