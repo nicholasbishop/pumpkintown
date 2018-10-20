@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 
 project(pumpkintown)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -std=c++11")
 
 set(CMAKE_CXX_STANDARD 11)
 
