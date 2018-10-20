@@ -9,7 +9,6 @@
 #define WAFFLE_API_VERSION 0x0106
 #include <waffle-1/waffle.h>
 
-#include "pumpkintown_deserialize.hh"
 #include "pumpkintown_function_structs.hh"
 #include "pumpkintown_gl_enum.hh"
 #include "pumpkintown_gl_functions.hh"

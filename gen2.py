@@ -360,7 +360,6 @@ def gen_replay_source():
     src.add_cxx_include('pumpkintown_replay.hh')
     src.add_cxx_include('vector', system=True)
     src.add_cxx_include('waffle-1/waffle.h', system=True)
-    src.add_cxx_include('pumpkintown_deserialize.hh')
     src.add_cxx_include('pumpkintown_function_structs.hh')
     src.add_cxx_include('pumpkintown_gl_functions.hh')
     src.add_cxx_include('pumpkintown_gl_types.hh')

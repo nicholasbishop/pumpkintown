@@ -14,8 +14,6 @@ struct waffle_window;
 
 namespace pumpkintown {
 
-class Deserialize;
-
 class Replay {
  public:
   explicit Replay(const std::string& path);
