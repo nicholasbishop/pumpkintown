@@ -82,8 +82,12 @@ add_custom_command(TARGET pumpkintown POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy libpumpkintown.so gl/libGL.so.1)
 
 add_custom_command(TARGET pumpkintown POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy libpumpkintown.so gl/libGLESv2.so.2)
+  COMMAND ${CMAKE_COMMAND} -E copy libpumpkintown.so gl/libGLESv2.so.2)
+
+add_custom_command(TARGET pumpkintown POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy libpumpkintown.so gl/libEGL.so.1)
 
 install(TARGETS pumpkintown_replay RUNTIME DESTINATION bin)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gl/libGL.so.1 DESTINATION share/pumpkintown)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gl/libGLESv2.so.2 DESTINATION share/pumpkintown)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gl/libEGL.so.1 DESTINATION share/pumpkintown)

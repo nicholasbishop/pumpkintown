@@ -4,7 +4,9 @@
 #include <vector>
 
 #include "pumpkintown_dlib.hh"
+#include "pumpkintown_function_structs.hh"
 #include "pumpkintown_gl_enum.hh"
+#include "pumpkintown_serialize.hh"
 #include "pumpkintown_trace.hh"
 
 namespace pumpkintown {
@@ -56,33 +58,48 @@ static void check_gl_error(const int line) {
   }
 }
 
+// TODO this is copied out of the autogen code
+static void write_glTexImage2D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const void * pixels) {
+  pumpkintown::serialize()->write(pumpkintown::FunctionId::glTexImage2D);
+  pumpkintown::FnGlTexImage2D fn;
+  fn.target = target;
+  fn.level = level;
+  fn.internalformat = internalformat;
+  fn.width = width;
+  fn.height = height;
+  fn.border = border;
+  fn.format = format;
+  fn.type = type;
+  fn.pixels = reinterpret_cast<const uint8_t*>(pixels);
+  fn.finalize();
+  pumpkintown::serialize()->write(fn.num_bytes());
+  fn.write_to_file(pumpkintown::serialize()->file());
+  fn.pixels = nullptr;
+}
+
 void trace_append_glEGLImageTargetTexture2DOES(GLenum target, GLeglImageOES image) {
   const GLint level{0};  // TODO is this always correct?
-  //GLint internalformat;
+  GLint internalformat{GL_RGBA}; // TODO
   GLsizei width{0};
   GLsizei height{0};
-  //GLint border;
-  //GLenum format;
-  //GLenum type;
+  GLint border{0};
+  GLenum format{GL_RGBA};
+  GLenum type{GL_UNSIGNED_BYTE};
   //const GLvoid * data;
+
+  GLint orig_fbo{0};
+  pumpkintown::real::glGetIntegerv(GL_FRAMEBUFFER_BINDING, &orig_fbo);
 
   GLuint rb{0};
   pumpkintown::real::glGenRenderbuffers(1, &rb);
   pumpkintown::real::glBindRenderbuffer(GL_RENDERBUFFER_OES, rb);
-  check_gl_error(__LINE__);
   pumpkintown::real::glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER_OES, image);
-  check_gl_error(__LINE__);
-  glGetRenderbufferParameteriv(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_WIDTH, &width);
-  check_gl_error(__LINE__);
-  glGetRenderbufferParameteriv(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_HEIGHT, &height);
-  check_gl_error(__LINE__);
+  pumpkintown::real::glGetRenderbufferParameteriv(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_WIDTH, &width);
+  pumpkintown::real::glGetRenderbufferParameteriv(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_HEIGHT, &height);
 
   GLuint fbo{0};
   pumpkintown::real::glGenFramebuffers(1, &fbo);
-  check_gl_error(__LINE__);
   pumpkintown::real::glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-  check_gl_error(__LINE__);
-
   pumpkintown::real::glFramebufferRenderbuffer(
       GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER_OES, rb);
   check_gl_error(__LINE__);
@@ -97,6 +114,12 @@ void trace_append_glEGLImageTargetTexture2DOES(GLenum target, GLeglImageOES imag
   pixels.resize(width * height * 4);
   pumpkintown::real::glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE,
                                   pixels.data());
+
+  write_glTexImage2D(GL_TEXTURE_2D, level, internalformat, width, height,
+               border, format, type, pixels.data());
+
+  pumpkintown::real::glBindFramebuffer(GL_FRAMEBUFFER, orig_fbo);
+
   check_gl_error(__LINE__);
 
   // TODO: do we need to gen and bind a new texture here?

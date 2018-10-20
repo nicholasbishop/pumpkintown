@@ -90,6 +90,11 @@ Replay::Replay(const std::string& path)
     api = WAFFLE_CONTEXT_OPENGL_ES2;
     major = 2;
     minor = 0;
+  } else if (pt_platform && strcmp(pt_platform, "egl") == 0) {
+    platform = WAFFLE_PLATFORM_X11_EGL;
+    api = WAFFLE_CONTEXT_OPENGL_ES2;
+    major = 2;
+    minor = 0;
   }
 
   const int32_t init_attrs[] = {
@@ -207,6 +212,20 @@ void Replay::custom_glXMakeContextCurrent(const FnGlXMakeContextCurrent& fn) {
 }
 
 void Replay::custom_glXMakeCurrent(const FnGlXMakeCurrent& fn) {
+  if (!fn.ctx) {
+    waffle_make_current(display_, window_, nullptr);
+  } else {
+    c_ = contexts_.at(fn.ctx);
+    waffle_make_current(display_, window_, c_->waffle);
+  }
+}
+
+void Replay::custom_eglCreateContext(const FnEglCreateContext &fn) {
+  contexts_[fn.return_value] = new Context(
+      config_, fn.share_context ? contexts_.at(fn.share_context) : nullptr);
+}
+
+void Replay::custom_eglMakeCurrent(const FnEglMakeCurrent &fn) {
   if (!fn.ctx) {
     waffle_make_current(display_, window_, nullptr);
   } else {

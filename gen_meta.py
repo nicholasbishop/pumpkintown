@@ -33,9 +33,11 @@ def load_glinfo(args):
 
     path1 = os.path.join(args.source_dir, 'OpenGL-Registry/xml/gl.xml')
     path2 = os.path.join(args.source_dir, 'OpenGL-Registry/xml/glx.xml')
+    path3 = os.path.join(args.source_dir, 'EGL-Registry/api/egl.xml')
     registry = parse_xml.Registry()
     parse_xml.parse_xml(registry, path1)
     parse_xml.parse_xml(registry, path2)
+    parse_xml.parse_xml(registry, path3)
     function_id = 1
     for command in registry.commands:
         try:

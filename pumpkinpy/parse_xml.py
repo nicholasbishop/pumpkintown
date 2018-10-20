@@ -63,7 +63,7 @@ def parse_xml(registry, name):
     for node in root.iter('enum'):
         value = node.get('value')
         name = node.get('name')
-        if name and value and '"' not in value:
+        if name and value and '"' not in value and 'EGL_CAST' not in value:
             if value.startswith('0x'):
                 value = int(value, 16)
             else:

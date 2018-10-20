@@ -59,5 +59,26 @@ using GLhalfNV = unsigned short;
 using GLint64EXT = int64_t;
 using GLeglClientBufferEXT = void*;
 using GLclampx = int;
+using EGLBoolean = bool;
+using EGLDisplay = void*;
+using EGLSurface = void*;
+using EGLConfig = void*;
+using EGLContext = void*;
+using EGLint = int;
+using EGLenum = unsigned int;
+using EGLClientBuffer = void*;
+using EGLSync = void*;
+using EGLSyncKHR = void*;
+using EGLAttrib = void*;
+using EGLImage = void*;
+using EGLImageKHR = void*;
+using EGLStreamKHR = void*;
+using EGLNativePixmapType = void*;
+using EGLTimeKHR = void*;
+using EGLNativeWindowType = void*;
+using EGLNativeDisplayType = void*;
+using EGLObjectKHR = void*;
+using EGLLabelKHR = void*;
+using EGLDEBUGPROCKHR = void*;
 
 #endif  // PUMPKINTOWN_GL_TYPES_HH_

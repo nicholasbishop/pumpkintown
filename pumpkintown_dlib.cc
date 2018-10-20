@@ -18,16 +18,38 @@ void* get_libgl() {
   return libgl;
 }
 
-void* get_real_proc_addr(const char* name) {
-  static void* (*get)(const char* name) = NULL;
-  if (!get) {
-    get = reinterpret_cast<void* (*)(const char* name)>(dlsym(get_libgl(), "glXGetProcAddress"));
+void* get_libegl() {
+  static void* libegl = NULL;
+  if (!libegl) {
+    libegl = dlopen("libEGL.so", RTLD_LAZY);
   }
-  return get(name);
+  return libegl;
+}
+
+void* get_real_proc_addr(const char* name) {
+  static void* (*get_gl)(const char* name) =
+      reinterpret_cast<void* (*)(const char* name)>(
+          dlsym(get_libgl(), "glXGetProcAddress"));
+  static void* (*get_egl)(const char* name) =
+      reinterpret_cast<void* (*)(const char* name)>(
+          dlsym(get_libegl(), "eglGetProcAddress"));
+  if (get_egl) {
+    void* ret = get_egl(name);
+    if (ret) {
+      return ret;
+    }
+  }
+  return get_gl(name);
 }
 
 void* get_real_proc_addr(const unsigned char* name) {
   return get_real_proc_addr(reinterpret_cast<const char*>(name));
+}
+
+// TODO
+extern "C" void* glXGetProcAddress(const char* name);
+extern "C" void* eglGetProcAddress(const char* name) {
+  return glXGetProcAddress(name);
 }
 
 namespace pumpkintown {

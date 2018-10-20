@@ -10,6 +10,11 @@
     "printf": "%d"
   },
   {
+    "c": "EGLBoolean",
+    "serialize": "uint8_t",
+    "printf": "%d"
+  },
+  {
     "c": "Bool",
     "serialize": "uint8_t",
     "printf": "%d"
@@ -39,6 +44,11 @@
     "printf": "0x%x"
   },
   {
+    "c": "EGLenum",
+    "serialize": "uint32_t",
+    "printf": "0x%x"
+  },
+  {
     "c": "GLhandleARB",
     "serialize": "uint32_t",
     "printf": "%d"
@@ -55,6 +65,11 @@
   },
   {
     "c": "GLint",
+    "serialize": "int32_t",
+    "printf": "%d"
+  },
+  {
+    "c": "EGLint",
     "serialize": "int32_t",
     "printf": "%d"
   },
@@ -144,6 +159,78 @@
   },
   {
     "c": "GLXContext",
+    "serialize": "const void*"
+  },
+  {
+    "c": "EGLDisplay",
+    "serialize": "const void*"
+  },
+  {
+    "c": "EGLSurface",
+    "serialize": "const void*"
+  },
+  {
+    "c": "EGLContext",
+    "serialize": "const void*"
+  },
+  {
+    "c": "EGLConfig",
+    "serialize": "const void*"
+  },
+  {
+    "c": "EGLClientBuffer",
+    "serialize": "const void*"
+  },
+  {
+    "c": "EGLImage",
+    "serialize": "const void*"
+  },
+  {
+    "c": "EGLSync",
+    "serialize": "const void*"
+  },
+  {
+    "c": "EGLImageKHR",
+    "serialize": "const void*"
+  },
+  {
+    "c": "EGLSyncKHR",
+    "serialize": "const void*"
+  },
+  {
+    "c": "EGLStreamKHR",
+    "serialize": "const void*"
+  },
+  {
+    "c": "EGLAttrib",
+    "serialize": "const void*"
+  },
+  {
+    "c": "EGLNativePixmapType",
+    "serialize": "const void*"
+  },
+  {
+    "c": "EGLNativeWindowType",
+    "serialize": "const void*"
+  },
+  {
+    "c": "EGLNativeDisplayType",
+    "serialize": "const void*"
+  },
+  {
+    "c": "EGLTimeKHR",
+    "serialize": "const void*"
+  },
+  {
+    "c": "EGLObjectKHR",
+    "serialize": "const void*"
+  },
+  {
+    "c": "EGLLabelKHR",
+    "serialize": "const void*"
+  },
+  {
+    "c": "EGLDEBUGPROCKHR",
     "serialize": "const void*"
   },
   {

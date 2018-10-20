@@ -27,6 +27,8 @@ class Replay {
   void custom_glXCreateNewContext(const FnGlXCreateNewContext& fn);
   void custom_glXMakeContextCurrent(const FnGlXMakeContextCurrent& fn);
   void custom_glXMakeCurrent(const FnGlXMakeCurrent& fn);
+  void custom_eglCreateContext(const FnEglCreateContext &fn);
+  void custom_eglMakeCurrent(const FnEglMakeCurrent &fn);
 
   void custom_glCreateProgram(const FnGlCreateProgram& fn);
   void custom_glCreateShader(const FnGlCreateShader& fn);
