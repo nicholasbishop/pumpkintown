@@ -244,7 +244,7 @@ class Exploder:
 
         try:
             while True:
-                call = self.reader.read_call()
+                call = self.reader.read()
                 if call:
                     self.handle_call(call)
         except StopIteration:

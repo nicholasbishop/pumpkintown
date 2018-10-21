@@ -16,6 +16,7 @@ class Call:
     
 def py_struct_type(stype):
     return {'const void*': 'Q',
+            'char': 'c',
             'double': 'd',
             'float': 'f',
             'int32_t': 'i',
@@ -29,15 +30,37 @@ def py_struct_type(stype):
 class TraceReader:
     def __init__(self, path):
         self._file = open(path, 'rb')
+        self._function_map = {}
+
+    def read(self):
+        buf = self._file.read(1)
+        if len(buf) == 0:
+            raise StopIteration
+        elif buf[0] == 1:
+            self.read_function_id()
+            return self.read()
+        elif buf[0] == 2:
+            return self.read_call()
+        else:
+            raise ValueError('invalid message type')
+
+    def read_function_id(self):
+        header = struct.Struct('<HB')
+        buf = self._file.read(header.size)
+        dyn_id, name_len = header.unpack(buf)
+        name = self._file.read(name_len).decode('utf-8')
+        for func in glmeta.FUNCTIONS:
+            if func.name == name:
+                func_id = func.function_id
+                break
+        print(name, dyn_id, func_id)
+        self._function_map[dyn_id] = func_id
 
     def read_call(self):
         header = struct.Struct('<HQ')
         buf = self._file.read(header.size)
-        try:
-            function_id, size = header.unpack(buf)
-        except struct.error:
-            raise StopIteration
-        func = glmeta.FUNCTIONS[function_id - 1]
+        dyn_id, size = header.unpack(buf)
+        func = glmeta.FUNCTIONS[self._function_map[dyn_id] - 1]
 
         if not func.is_replayable():
             return
@@ -80,7 +103,7 @@ class TraceReader:
             length = call.fields[f'{param.name}_length']
             if length == 0:
                 call.fields[param.name] = None
-            elif param.array == 'uint8_t':
+            elif param.array in ('uint8_t', 'char'):
                 call.fields[param.name] = self._file.read(length)
             else:
                 elem = struct.Struct(py_struct_type(param.array))
