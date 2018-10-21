@@ -65,6 +65,7 @@ def load_glinfo(args):
                         param.array = overrides.get('array')
                         param.offset = overrides.get('offset')
                         param.custom_print = overrides.get('custom_print')
+                        param.resource = overrides.get('resource')
                     func.custom_replay = val.get('custom_replay')
                     func.no_replay = val.get('no_replay')
                     func.custom_io = val.get('custom_io')

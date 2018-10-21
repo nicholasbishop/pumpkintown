@@ -124,17 +124,30 @@
   },
   "glBindAttribLocation": {
     "params": {
+      "program": {
+        "resource": "program"
+      },
       "name": {
         "array": "char"
       }
     }
   },
   "glCompileShader": {
-    "custom_replay": true
+    "custom_replay": true,
+    "params": {
+      "shader": {
+        "resource": "shader"
+      }
+    }
   },
   "glLinkProgram": {
     "trace_append": true,
-    "custom_replay": true
+    "custom_replay": true,
+    "params": {
+      "program": {
+        "resource": "program"
+      }
+    }
   },
   "glEGLImageTargetTexture2DOES": {
     "trace_append": true
@@ -236,7 +249,15 @@
     "custom_replay": true
   },
   "glAttachShader": {
-    "custom_replay": true
+    "custom_replay": true,
+    "params": {
+      "program": {
+        "resource": "program"
+      },
+      "shader": {
+        "resource": "shader"
+      }
+    }
   },
   "glDeleteShader": {
     "custom_replay": true

@@ -7,7 +7,7 @@ https://github.com/waffle-gl/waffle.git
 ### Python3
 
 - attrs
-- purepng
+- pillow
 
 ## Building
 

@@ -32,12 +32,12 @@ class Context:
 class Exploder:
     def __init__(self, trace, output):
         self.output = output
-        self.png_index = 0
         self.reader = trace_reader.TraceReader(trace)
         self.src = Source()
         self.context_map = {}
         self.next_id = 0
         self.ctx = None
+        self.call_index = 0
 
     def take_id(self):
         nid = self.next_id
@@ -52,18 +52,27 @@ class Exploder:
         fmt = call.fields['format']
         typ = call.fields['type']
 
+        if not pixels:
+            return
+
         if fmt == glmeta.GL_RGBA and typ == glmeta.GL_UNSIGNED_BYTE:
             mode = 'RGBA'
+        elif fmt == glmeta.GL_RGB and typ == glmeta.GL_UNSIGNED_BYTE:
+            mode = 'RGB'
+        elif fmt == glmeta.GL_RGBA and typ == glmeta.GL_FLOAT:
+            mode = 'F'
+        elif fmt == glmeta.GL_RED and typ == glmeta.GL_UNSIGNED_BYTE:
+            mode = 'L'
         elif fmt == glmeta.GL_BGRA and typ == glmeta.GL_UNSIGNED_BYTE:
             # TODO
             mode = 'RGBA'
         else:
-            raise ValueError(fmt, typ)
+            raise ValueError(hex(fmt), hex(typ))
 
         img = PIL.Image.frombytes(mode, size, pixels, decoder_name='raw')
 
-        path = os.path.join(self.output, 'tex_{:04}.png'.format(self.png_index))
-        self.png_index += 1
+        path = os.path.join(
+            self.output, 'tex_{:04}.png'.format(self.call_index))
 
         with open(path, 'wb') as wfile:
             img.save(wfile)
@@ -148,6 +157,7 @@ class Exploder:
         save_path = self.save_raw('tex_', index,
                                   call.fields['source'].encode('utf-8'))
         shader = call.fields['shader']
+        shader = self.ctx.res.shaders[shader]
         self.src.add('  {')
         self.src.add(f'    const auto vec = read_all("{save_path}");')
         self.src.add(f'    const char* src = reinterpret_cast<const char*>(vec.data());')
@@ -182,18 +192,30 @@ class Exploder:
             program = self.ctx.res.programs[program]
         self.src.add(f'  glUseProgram({program});')
 
+    def check_gl_errors(self, call):
+        self.src.add('  check_gl_error();')
+        if call.func.name == 'glLinkProgram':
+            program = call.fields['program']
+            if program != 0:
+                program = self.ctx.res.programs[program]
+            self.src.add(f'  check_program_link({program});')
+        elif call.func.name == 'glCompileShader':
+            shader = call.fields['shader']
+            if shader != 0:
+                shader = self.ctx.res.shaders[shader]
+            self.src.add(f'  check_shader_compile({shader});')
+
     def handle_call(self, call):
         name = call.func.name
-        self.src.add(f'  fprintf(stderr, "{name}\\n");')
+        self.src.add(f'  fprintf(stderr, "{self.call_index} {name}\\n");')
 
         if name in ('glTexSubImage2D', 'glTexImage2D'):
-            # TODO
-            # self.save_texture_png(call)
-            pass
+            self.save_texture_png(call)
 
-        if name in ('glXCreateNewContext', 'glXCreateContextAttribsARB'):
+        if name in ('glXCreateNewContext', 'glXCreateContextAttribsARB',
+                    'eglCreateContext'):
             self.create_context(call)
-        elif name == 'glXMakeContextCurrent':
+        elif name in ('glXMakeContextCurrent', 'eglMakeCurrent'):
             self.make_context_current(call)
         elif name in ('glGenBuffers', 'glGenTextures',
                       'glGenFramebuffers', 'glGenVertexArrays',
@@ -214,14 +236,19 @@ class Exploder:
         elif name == 'glProgramBinary':
             self.program_binary(call)
         elif name in ('glXWaitGL', 'glXWaitX',
-                                'glXSwapIntervalMESA'):
+                      'glXSwapIntervalMESA'):
             # TODO
             pass
         else:
             args = []
             for param in call.func.params:
                 field = call.fields[param.name]
-                if param.array:
+                if param.resource:
+                    if field == 0:
+                        args.append(0)
+                    else:
+                        args.append(self.ctx.res[param.resource][field])
+                elif param.array:
                     arr = f'arr{self.take_id()}'
                     length = call.fields[f'{param.name}_length']
                     init = ', '.join(str(elem) for elem in field)
@@ -233,10 +260,12 @@ class Exploder:
                     args.append(str(field))
             args = ', '.join(args)
             self.src.add(f'  {name}({args});')
-        self.src.add('  check_gl_error();')
+        self.check_gl_errors(call)
+        self.call_index += 1
 
     def explode(self):
         self.src.add_cxx_include('vector', system=True)
+        self.src.add_cxx_include('epoxy/egl.h', system=True)
         self.src.add_cxx_include('epoxy/gl.h', system=True)
         self.src.add_cxx_include('waffle-1/waffle.h', system=True)
         self.src.add_cxx_include('replay.hh')

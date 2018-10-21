@@ -53,7 +53,6 @@ class TraceReader:
             if func.name == name:
                 func_id = func.function_id
                 break
-        print(name, dyn_id, func_id)
         self._function_map[dyn_id] = func_id
 
     def read_call(self):
@@ -117,11 +116,11 @@ class TraceReader:
         if count > 0:
             elem = struct.Struct('i')
             buf = self._file.read(count * elem.size)
-            lengths = list(elem.iter_unpack(buf))
+            lengths = [length[0] for length in list(elem.iter_unpack(buf))]
 
             source = ''
             for length in lengths:
-                source += self._file.read(length[0]).decode('utf-8')[:-1]
+                source += self._file.read(length).decode('utf-8')
 
             call.fields['source'] = source
         return call

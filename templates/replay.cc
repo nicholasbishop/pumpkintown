@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstring>
 #include <stdexcept>
 
 #include <epoxy/gl.h>
@@ -32,6 +33,49 @@ std::vector<uint8_t> read_all(const std::string& path) {
   return vec;
 }
 
+void check_program_link(const GLuint program) {
+  GLint success = 0;
+  glGetProgramiv(program, GL_LINK_STATUS, &success);
+  if (success) {
+    return;
+  }
+
+  fprintf(stderr, "link failed:\n");
+
+  GLint length = 0;
+  glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
+  std::vector<char> log(length);
+  glGetProgramInfoLog(program, length, &length, log.data());
+
+  fprintf(stderr, "%s\n", log.data());
+}
+
+void check_shader_compile(const GLuint shader) {
+  // Print shader source
+  if (true) {
+    GLint srclen = 0;
+    glGetShaderiv(shader, GL_SHADER_SOURCE_LENGTH, &srclen);
+    std::vector<char> src(srclen);
+    glGetShaderSource(shader, srclen, &srclen, src.data());
+    fprintf(stderr, "shader source: %s\n", src.data());
+  }
+
+  GLint success = 0;
+  glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+  if (success) {
+    return;
+  }
+
+  fprintf(stderr, "compile failed:\n");
+
+  GLint length = 0;
+  glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
+  std::vector<char> log(length);
+  glGetShaderInfoLog(shader, length, &length, log.data());
+
+  fprintf(stderr, "%s\n", log.data());
+}
+
 void check_gl_error() {
   const auto err = glGetError();
   switch (err) {
@@ -59,20 +103,35 @@ void check_gl_error() {
 }
 
 int main() {
+  int32_t platform = WAFFLE_PLATFORM_GLX;
+  int32_t api = WAFFLE_CONTEXT_OPENGL;
+  int32_t major = 4;
+  int32_t minor = 5;
+
+  const char* pt_platform = getenv("PUMPKINTOWN_PLATFORM");
+  if (pt_platform && strcmp(pt_platform, "chromeos") == 0) {
+    printf("platform: chromeos\n");
+    platform = 0x0019;  // "NULL" platform defined in CrOS's fork
+    api = WAFFLE_CONTEXT_OPENGL_ES2;
+    major = 2;
+    minor = 0;
+  } else if (pt_platform && strcmp(pt_platform, "egl") == 0) {
+    platform = WAFFLE_PLATFORM_X11_EGL;
+    api = WAFFLE_CONTEXT_OPENGL_ES2;
+    major = 2;
+    minor = 0;
+  }
+
   const int32_t init_attrs[] = {
-    WAFFLE_PLATFORM, WAFFLE_PLATFORM_GLX,
+    WAFFLE_PLATFORM, platform,
     0,
   };
 
   const int32_t config_attrs[] = {
-    WAFFLE_CONTEXT_API,         WAFFLE_CONTEXT_OPENGL,
+    WAFFLE_CONTEXT_API,         api,
 
-#if 1
-    WAFFLE_CONTEXT_MAJOR_VERSION, 4,
-    WAFFLE_CONTEXT_MINOR_VERSION, 5,
-
-    //WAFFLE_CONTEXT_PROFILE,  WAFFLE_CONTEXT_COMPATIBILITY_PROFILE,
-#endif
+    WAFFLE_CONTEXT_MAJOR_VERSION, major,
+    WAFFLE_CONTEXT_MINOR_VERSION, minor,
 
     WAFFLE_RED_SIZE,            8,
     WAFFLE_BLUE_SIZE,           8,

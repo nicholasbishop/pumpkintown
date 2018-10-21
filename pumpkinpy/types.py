@@ -18,6 +18,7 @@ class Param:
     array = attr.ib(default=None)
     offset = attr.ib(default=None)
     custom_print = attr.ib(default=None)
+    resource = attr.ib(default=None)
 
     def cxx(self):
         return '{} {}'.format(self.ptype.ctype, self.name)

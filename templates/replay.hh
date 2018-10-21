@@ -15,4 +15,7 @@ std::vector<uint8_t> read_all(const std::string& path);
 
 void check_gl_error();
 
+void check_shader_compile(GLuint shader);
+void check_program_link(GLuint program);
+
 #endif  // TEMPLATES_REPLAY_HH_
