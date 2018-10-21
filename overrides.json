@@ -122,6 +122,13 @@
       }
     }
   },
+  "glBindAttribLocation": {
+    "params": {
+      "name": {
+        "array": "char"
+      }
+    }
+  },
   "glCompileShader": {
     "custom_replay": true
   },

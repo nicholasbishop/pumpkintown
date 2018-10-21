@@ -171,6 +171,10 @@ void FnGlMaterialfv::finalize() {
   }
 }
 
+void FnGlBindAttribLocation::finalize() {
+  name_length = strlen(name) + 1;
+}
+
 FnGlShaderSource::~FnGlShaderSource() {
   if (string) {
     for (int32_t i{0}; i < count; i++) {

@@ -1,8 +1,13 @@
 #include "pumpkintown_trace.hh"
 
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
+
+#include <sys/types.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
 #include "pumpkintown_dlib.hh"
 #include "pumpkintown_function_id.hh"
@@ -36,19 +41,22 @@ void begin_message(const std::string& name) {
 
 void trace_append_glLinkProgram(const GLuint program) {
   GLint num_active_attributes{0};
-  glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, &num_active_attributes);
+  pumpkintown::real::glGetProgramiv(
+      program, GL_ACTIVE_ATTRIBUTES, &num_active_attributes);
   for (GLint attrib{0}; attrib < num_active_attributes; attrib++) {
     // TODO(nicholasbishop): proper way to size this buffer?
     GLchar name[512];
     GLint size{0};
     GLenum type{0};
                 
-    glGetActiveAttrib(program, attrib, sizeof(name), NULL, &size, &type, name);
+    pumpkintown::real::glGetActiveAttrib(
+        program, attrib, sizeof(name), NULL, &size, &type, name);
     if (std::string(name).substr(0, 3) == "gl_") {
       continue;
     }
 
-    const GLint location{glGetAttribLocation(program, name)};
+    const GLint location{
+      pumpkintown::real::glGetAttribLocation(program, name)};
     if (location >= 0) {
       glBindAttribLocation(program, location, name);
     }
@@ -198,6 +206,15 @@ void trace_append_glEGLImageTargetTexture2DOES(GLenum target, GLeglImageOES imag
 
   // glTexImage2D(target2, level, internalformat, width, height, border,
   //              format, type, data);
+}
+
+void print_tids() {
+  static std::set<int> tids;
+  int tid = syscall(__NR_gettid);
+  if (tids.find(tid) == tids.end()) {
+    fprintf(stderr, "tid=%d\n", tid);
+    tids.emplace(tid);
+  }
 }
 
 }

@@ -52,13 +52,17 @@ def gen_trace_source():
     src = Source()
     src.add_cxx_include('pumpkintown_trace_gen.hh')
     src.add_cxx_include('cstring', system=True)
+    src.add_cxx_include('mutex', system=True)
     src.add_cxx_include('pumpkintown_function_structs.hh')
     src.add_cxx_include('pumpkintown_dlib.hh')
     src.add_cxx_include('pumpkintown_serialize.hh')
     src.add_cxx_include('pumpkintown_trace.hh')
+    src.add('  static std::mutex mutex;')
     for func in FUNCTIONS:
         src.add('{} {{'.format(func.cxx_decl()))
-        if False:
+        if True:
+            src.add('  pumpkintown::print_tids();')
+        if True:
             src.add('  fprintf(stderr, "{}\\n");'.format(func.name))
         # Call the real function and capture its return value if it has one
         src.add('  {}pumpkintown::real::{}({});'.format(
@@ -69,6 +73,7 @@ def gen_trace_source():
         if func.trace_append:
             src.add('  pumpkintown::trace_append_{}({});'.format(
                 func.name, func.cxx_call_args()))
+        src.add('  std::lock_guard<std::mutex> lock(mutex);')
         # Store the function ID
         src.add('  pumpkintown::begin_message("{}");'.format(
             func.name))
