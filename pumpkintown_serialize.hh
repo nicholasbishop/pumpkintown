@@ -4,8 +4,6 @@
 #include <cstdint>
 #include <string>
 
-#include "pumpkintown_function_id.hh"
-
 namespace pumpkintown {
 
 class Serialize {
@@ -33,8 +31,6 @@ class Serialize {
 
   void write(float value);
   void write(double value);
-
-  void write(FunctionId value);
 
  private:
   FILE* file_{nullptr};

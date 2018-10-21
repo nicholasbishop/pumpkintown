@@ -2,6 +2,7 @@
 
 #include <sstream>
 #include <stdexcept>
+#include <vector>
 
 namespace pumpkintown {
 
@@ -45,8 +46,39 @@ TraceIterator::TraceIterator(const std::string& path) {
 }
 
 void TraceIterator::next() {
-  read_exact(file_, &function_id_, sizeof(FunctionId));
-  read_exact(file_, &item_size_, sizeof(uint64_t));
+  MsgType msg_type{MsgType::Invalid};
+  read_exact(file_, &msg_type, sizeof(uint8_t));
+
+  switch (msg_type) {
+    case MsgType::FunctionId:
+      {
+        uint16_t function_id{0};
+        read_exact(file_, &function_id, sizeof(uint16_t));
+        uint8_t name_len{0};
+        read_exact(file_, &name_len, sizeof(uint8_t));
+        std::vector<uint8_t> name;
+        name.resize(name_len);
+        read_exact(file_, name.data(), name_len);
+
+        std::string name_str{name.begin(), name.end()};
+        function_map_[function_id] = function_id_from_name(name_str);
+
+        next();
+        break;
+      }
+
+    case MsgType::Call:
+      {
+        uint16_t function_id{0};
+        read_exact(file_, &function_id, sizeof(uint16_t));
+        function_id_ = function_map_.at(function_id);
+        read_exact(file_, &item_size_, sizeof(uint64_t));
+        break;
+      }
+
+    default:
+      throw std::runtime_error("invalid message");
+  }
 }
 
 void TraceIterator::skip() {

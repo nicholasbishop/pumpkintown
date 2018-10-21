@@ -1,15 +1,38 @@
-#include "pumpkintown_custom_trace.hh"
+#include "pumpkintown_trace.hh"
 
+#include <map>
 #include <string>
 #include <vector>
 
 #include "pumpkintown_dlib.hh"
+#include "pumpkintown_function_id.hh"
 #include "pumpkintown_function_structs.hh"
 #include "pumpkintown_gl_enum.hh"
+#include "pumpkintown_io.hh"
 #include "pumpkintown_serialize.hh"
-#include "pumpkintown_trace.hh"
+#include "pumpkintown_trace_gen.hh"
 
 namespace pumpkintown {
+
+void begin_message(const std::string& name) {
+  static std::map<std::string, uint16_t> map;
+  static uint16_t next_id{0};
+  const auto iter = map.find(name);
+  if (iter == map.end()) {
+    const auto id = next_id;
+    next_id++;
+    serialize()->write(static_cast<uint8_t>(MsgType::FunctionId));
+    serialize()->write(static_cast<uint16_t>(id));
+    serialize()->write(static_cast<uint8_t>(name.size()));
+    serialize()->write(reinterpret_cast<const uint8_t*>(name.c_str()),
+                       name.size());
+    map[name] = id;
+    begin_message(name);
+  } else {
+    serialize()->write(static_cast<uint8_t>(MsgType::Call));
+    serialize()->write(static_cast<uint16_t>(map[name]));
+  }
+}
 
 void trace_append_glLinkProgram(const GLuint program) {
   GLint num_active_attributes{0};
@@ -60,7 +83,7 @@ static void check_gl_error(const int line) {
 
 // TODO this is copied out of the autogen code
 static void write_glTexImage2D(GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const void * pixels) {
-  pumpkintown::serialize()->write(pumpkintown::FunctionId::glTexImage2D);
+  begin_message("glTexImage2D");
   pumpkintown::FnGlTexImage2D fn;
   fn.target = target;
   fn.level = level;

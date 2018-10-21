@@ -178,11 +178,7 @@ void Replay::replay() {
     iter_.next();
     replay_one();
 
-    if (iter_.function_id() != FunctionId::glGetStringi) {
-      check_gl_error();
-    } else {
-      glGetError();
-    }
+    check_gl_error();
 
     //capture();
   }

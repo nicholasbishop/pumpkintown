@@ -50,12 +50,12 @@ def gen_trace_header():
 
 def gen_trace_source():
     src = Source()
-    src.add_cxx_include('pumpkintown_trace.hh')
+    src.add_cxx_include('pumpkintown_trace_gen.hh')
     src.add_cxx_include('cstring', system=True)
     src.add_cxx_include('pumpkintown_function_structs.hh')
     src.add_cxx_include('pumpkintown_dlib.hh')
-    src.add_cxx_include('pumpkintown_custom_trace.hh')
     src.add_cxx_include('pumpkintown_serialize.hh')
+    src.add_cxx_include('pumpkintown_trace.hh')
     for func in FUNCTIONS:
         src.add('{} {{'.format(func.cxx_decl()))
         if False:
@@ -70,7 +70,7 @@ def gen_trace_source():
             src.add('  pumpkintown::trace_append_{}({});'.format(
                 func.name, func.cxx_call_args()))
         # Store the function ID
-        src.add('  pumpkintown::serialize()->write(pumpkintown::FunctionId::{});'.format(
+        src.add('  pumpkintown::begin_message("{}");'.format(
             func.name))
         if func.is_replayable() and not func.is_empty():
             src.add('  pumpkintown::{} fn;'.format(func.cxx_struct_name()))
@@ -172,30 +172,29 @@ def gen_gl_enum_source():
 def gen_function_id_header():
     src = Source()
     src.add_cxx_include('cstdint', system=True)
+    src.add_cxx_include('string', system=True)
     src.add('namespace pumpkintown {')
     src.add('enum class FunctionId : uint16_t {')
     src.add('  Invalid = 0,')
     for func in FUNCTIONS:
         src.add('  {} = {},'.format(func.name, func.function_id))
     src.add('};')
+    src.add('FunctionId function_id_from_name(const std::string& name);')
     src.add('}')
     src.add_guard('PUMPKINTOWN_FUNCTION_ID_HH_')
     return src
 
 
-def gen_function_name_source():
+def gen_function_id_source():
     src = Source()
     src.add_cxx_include('pumpkintown_function_id.hh')
     src.add('namespace pumpkintown {')
-    src.add('const char* function_id_to_string(const FunctionId id) {')
-    src.add('  switch (id) {')
-    src.add('  case FunctionId::Invalid:')
-    src.add('    break;')
+    src.add('FunctionId function_id_from_name(const std::string& name) {')
     for func in FUNCTIONS:
-        src.add('  case FunctionId::{}:'.format(func.name))
-        src.add('    return "{}";'.format(func.name))
-    src.add('  }')
-    src.add('  return "Invalid";')
+        src.add('  if (name == "{}") {{'.format(func.name))
+        src.add('    return FunctionId::{};'.format(func.name))
+        src.add('}')
+    src.add('  return FunctionId::Invalid;')
     src.add('}')
     src.add('}')
     return src
@@ -360,6 +359,7 @@ def gen_replay_source():
     src.add_cxx_include('pumpkintown_replay.hh')
     src.add_cxx_include('vector', system=True)
     src.add_cxx_include('waffle-1/waffle.h', system=True)
+    src.add_cxx_include('pumpkintown_function_id.hh')
     src.add_cxx_include('pumpkintown_function_structs.hh')
     src.add_cxx_include('pumpkintown_gl_functions.hh')
     src.add_cxx_include('pumpkintown_gl_types.hh')
@@ -469,11 +469,11 @@ def main():
 
     load_meta(args)
 
-    gen_trace_source().write(os.path.join(args.build_dir, 'pumpkintown_trace.cc'))
-    gen_trace_header().write(os.path.join(args.build_dir, 'pumpkintown_trace.hh'))
+    gen_trace_source().write(os.path.join(args.build_dir, 'pumpkintown_trace_gen.cc'))
+    gen_trace_header().write(os.path.join(args.build_dir, 'pumpkintown_trace_gen.hh'))
 
     gen_function_id_header().write(os.path.join(args.build_dir, 'pumpkintown_function_id.hh'))
-    gen_function_name_source().write(os.path.join(args.build_dir, 'pumpkintown_function_name.cc'))
+    gen_function_id_source().write(os.path.join(args.build_dir, 'pumpkintown_function_id.cc'))
     gen_function_structs_header().write(os.path.join(args.build_dir, 'pumpkintown_function_structs.hh'))
     gen_function_structs_source().write(os.path.join(args.build_dir, 'pumpkintown_function_structs.cc'))
 

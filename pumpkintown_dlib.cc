@@ -33,13 +33,12 @@ void* get_real_proc_addr(const char* name) {
   static void* (*get_egl)(const char* name) =
       reinterpret_cast<void* (*)(const char* name)>(
           dlsym(get_libegl(), "eglGetProcAddress"));
-  if (get_egl) {
-    void* ret = get_egl(name);
-    if (ret) {
-      return ret;
-    }
+  void* ret = get_gl(name);
+  if (ret) {
+    return ret;
+  } else {
+    return get_egl(name);
   }
-  return get_gl(name);
 }
 
 void* get_real_proc_addr(const unsigned char* name) {

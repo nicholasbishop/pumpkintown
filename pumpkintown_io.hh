@@ -3,11 +3,18 @@
 
 #include <cstdio>
 #include <cstdint>
+#include <map>
 #include <string>
 
 #include "pumpkintown_function_id.hh"
 
 namespace pumpkintown {
+
+enum class MsgType : uint8_t {
+  Invalid = 0,
+  FunctionId = 1,
+  Call = 2,
+};
 
 void read_exact(FILE* f, void* dst, uint64_t num_bytes);
 void write_exact(FILE* f, const void* src, uint64_t num_bytes);
@@ -35,6 +42,7 @@ class TraceIterator {
 
  private:
   FILE* file_;
+  std::map<uint16_t, FunctionId> function_map_;
   FunctionId function_id_{FunctionId::Invalid};
   uint64_t item_size_{0};
 };
