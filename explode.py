@@ -80,7 +80,10 @@ class Exploder:
     def save_raw(self, prefix, index, data):
         if not data:
             return
-        name = 'tex_{:04}.raw'.format(index)
+        ext = 'raw'
+        if prefix == 'shader':
+            ext = 'txt'
+        name = '{}_{:04}.{}'.format(prefix, index, ext)
         path = os.path.join(self.output, name)
         with open(path, 'wb') as wfile:
             wfile.write(data)
@@ -121,7 +124,7 @@ class Exploder:
     # TODO dedup with tex_image
     def buffer_data(self, call):
         index = self.take_id()
-        save_name = self.save_raw('buf_', index, call.fields['data'])
+        save_name = self.save_raw('buf', index, call.fields['data'])
         args = []
         self.src.add('  {')
         for param in call.func.params:
@@ -136,7 +139,7 @@ class Exploder:
 
     def tex_image(self, call):
         index = self.take_id()
-        save_name = self.save_raw('tex_', index, call.fields['pixels'])
+        save_name = self.save_raw('tex', index, call.fields['pixels'])
         args = []
         self.src.add('  {')
         for param in call.func.params:
@@ -154,7 +157,7 @@ class Exploder:
 
     def shader_source(self, call):
         index = self.take_id()
-        save_path = self.save_raw('tex_', index,
+        save_path = self.save_raw('shader', index,
                                   call.fields['source'].encode('utf-8'))
         shader = call.fields['shader']
         shader = self.ctx.res.shaders[shader]
@@ -166,7 +169,7 @@ class Exploder:
 
     def program_binary(self, call):
         index = self.take_id()
-        save_path = self.save_raw('program_', index, call.fields['binary'])
+        save_path = self.save_raw('program', index, call.fields['binary'])
         self.src.add('  {')
         self.src.add(f'    const auto vec = read_all("{save_path}");')
         fmt = call.fields['binaryFormat']
