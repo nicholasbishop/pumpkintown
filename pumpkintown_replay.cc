@@ -86,9 +86,9 @@ Replay::Replay(const std::string& path)
   if (pt_platform && strcmp(pt_platform, "chromeos") == 0) {
     printf("platform: chromeos\n");
     platform = 0x0019;  // "NULL" platform defined in CrOS's fork
-    api = WAFFLE_CONTEXT_OPENGL;
-    major = 4;
-    minor = 5;
+    api = WAFFLE_CONTEXT_OPENGL_ES2;
+    major = 2;
+    minor = 0;
   } else if (pt_platform && strcmp(pt_platform, "egl") == 0) {
     platform = WAFFLE_PLATFORM_X11_EGL;
     api = WAFFLE_CONTEXT_OPENGL_ES2;
