@@ -29,14 +29,15 @@ class Context:
 
 
 class Exploder:
-    def __init__(self, trace, output):
-        self.output = output
-        self.reader = trace_reader.TraceReader(trace)
+    def __init__(self, args):
+        self.output = args.output
+        self.reader = trace_reader.TraceReader(args.trace)
         self.src = Source()
         self.context_map = {}
         self.next_id = 0
         self.ctx = None
         self.call_index = 0
+        self.enable_png_texture_dump = args.png_textures
 
     def take_id(self):
         nid = self.next_id
@@ -211,7 +212,7 @@ class Exploder:
         name = call.func.name
         self.src.add(f'  fprintf(stderr, "{self.call_index} {name}\\n");')
 
-        if name in ('glTexSubImage2D', 'glTexImage2D'):
+        if self.enable_png_texture_dump and name in ('glTexSubImage2D', 'glTexImage2D'):
             self.save_texture_png(call)
 
         if name in ('glXCreateNewContext', 'glXCreateContextAttribsARB',
@@ -302,11 +303,12 @@ def create_template_link(args, name):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--png-textures', action='store_true')
     parser.add_argument('trace')
     parser.add_argument('output')
     args = parser.parse_args()
 
-    exploder = Exploder(args.trace, args.output)
+    exploder = Exploder(args)
     exploder.explode()
 
     create_template_link(args, 'Makefile')
