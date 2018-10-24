@@ -18,4 +18,9 @@ void check_gl_error();
 void check_shader_compile(GLuint shader);
 void check_program_link(GLuint program);
 
+void probe(waffle_window* window);
+void probe2(waffle_window* window);
+
+void capture_fb(const std::string& path);
+
 #endif  // TEMPLATES_REPLAY_HH_

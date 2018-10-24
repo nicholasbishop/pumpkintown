@@ -2,7 +2,6 @@
 
 import argparse
 import os
-import shutil
 import sys
 
 import PIL.Image
@@ -259,11 +258,15 @@ class Exploder:
                     args.append(arr)
                 elif param.offset:
                     args.append(f'(const void*){field}')
-                else:
+                elif isinstance(field, float):
                     args.append(str(field))
+                else:
+                    args.append(hex(field))
             args = ', '.join(args)
             self.src.add(f'  {name}({args});')
         self.check_gl_errors(call)
+        # if name == 'glDrawElements' and self.call_index > 25000:
+        #     self.src.add(f'  capture("fbo{self.call_index}.png");')
         self.call_index += 1
 
     def explode(self):
@@ -289,6 +292,14 @@ class Exploder:
             wfile.write(self.src.text())
 
 
+def create_template_link(args, name):
+    path = os.path.join(args.output, name)
+    target = os.path.join(os.pardir, 'templates', name)
+    if os.path.exists(path):
+        os.remove(path)
+    os.symlink(target, path)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('trace')
@@ -298,9 +309,10 @@ def main():
     exploder = Exploder(args.trace, args.output)
     exploder.explode()
 
-    shutil.copy('templates/Makefile', args.output)
-    shutil.copy('templates/replay.cc', args.output)
-    shutil.copy('templates/replay.hh', args.output)
+    create_template_link(args, 'Makefile')
+    create_template_link(args, 'replay.cc')
+    create_template_link(args, 'replay.hh')
+    create_template_link(args, 'stb_image_write.h')
     
 
 if __name__ == '__main__':

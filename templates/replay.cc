@@ -2,10 +2,15 @@
 #include <cstring>
 #include <stdexcept>
 
+#include <unistd.h>
+
 #include <epoxy/gl.h>
 #include <waffle-1/waffle.h>
 
 #include "replay.hh"
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
 std::vector<uint8_t> read_all(const std::string& path) {
   FILE* file{fopen(path.c_str(), "rb")};
@@ -165,4 +170,167 @@ int main() {
   waffle_window_show(window);
 
   draw(display, window, config);
+}
+
+void capture_fb(const std::string& path) {
+  GLint orig_read_fb{0}, orig_draw_fb{0};
+  glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &orig_read_fb);
+  glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &orig_draw_fb);
+
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, orig_draw_fb);
+
+  GLint type{0};
+  glGetFramebufferAttachmentParameteriv(
+      GL_READ_FRAMEBUFFER,
+      GL_COLOR_ATTACHMENT0,
+      GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE,
+      &type);
+
+  if (type != GL_TEXTURE) {
+    fprintf(stderr, "capture: attachment is not a texture\n");
+    return;
+  }
+
+  GLint tex_id{0};
+  glGetFramebufferAttachmentParameteriv(
+      GL_READ_FRAMEBUFFER,
+      GL_COLOR_ATTACHMENT0,
+      GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME,
+      &tex_id);
+
+  if (tex_id == 0) {
+    fprintf(stderr, "capture: bad texture ID\n");
+    return;
+  }
+
+  GLint tex_level{0};
+  glGetFramebufferAttachmentParameteriv(
+      GL_READ_FRAMEBUFFER,
+      GL_COLOR_ATTACHMENT0,
+      GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL,
+      &tex_level);
+
+  if (tex_level != 0) {
+    fprintf(stderr, "capture: bad texture level\n");
+    return;
+  }
+
+  GLint orig_tex{0};
+  glGetIntegerv(GL_TEXTURE_BINDING_2D, &orig_tex);
+
+  GLint width{0}, height{0};
+  glBindTexture(GL_TEXTURE_2D, tex_id);
+  glGetTexLevelParameteriv(GL_TEXTURE_2D, tex_level, GL_TEXTURE_WIDTH,
+                           &width);
+  glGetTexLevelParameteriv(GL_TEXTURE_2D, tex_level, GL_TEXTURE_HEIGHT,
+                           &height);
+  glBindTexture(GL_TEXTURE_2D, orig_tex);
+
+  const int comp = 4;
+  std::vector<uint8_t> pixels;
+  pixels.resize(width * height * comp);
+  glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, orig_read_fb);
+
+  check_gl_error();
+
+  bool boring = true;
+  for (const auto p : pixels) {
+    if (p != 0 && p != 255) {
+      boring = false;
+      break;
+    }
+  }
+
+  if (boring) {
+    return;
+  }
+
+  const int stride = width * 4;
+  stbi_write_png(path.c_str(), width, height, comp, pixels.data(), stride);
+}
+
+void probe2(waffle_window* window) {
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, 43);
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+  const int srcX0 = 0;
+  const int srcY0 = 0;
+  const int srcX1 = 1000;
+  const int srcY1 = 1000;
+  const int dstX0 = 0;
+  const int dstY0 = 0;
+  const int dstX1 = 1000;
+  const int dstY1 = 1000;
+  glBlitFramebuffer(
+     srcX0, srcY0, srcX1, srcY1,
+     dstX0, dstY0, dstX1, dstY1,
+     GL_COLOR_BUFFER_BIT, GL_NEAREST);
+  waffle_window_swap_buffers(window);
+  sleep(1);
+}
+
+void probe(waffle_window* window) {
+  const auto program = glCreateProgram();
+  const auto vs = glCreateShader(GL_VERTEX_SHADER);
+  const auto fs = glCreateShader(GL_FRAGMENT_SHADER);
+
+  const char* vs_src =
+      "attribute vec2 pos;"
+      "void main() { gl_Position = vec4(pos, 0, 1); }";
+
+  const char* fs_src =
+      "void main() { gl_FragColor = vec4(1, 0, 0, 1); }";
+
+  glShaderSource(vs, 1, &vs_src, nullptr);
+  glCompileShader(vs);
+  check_shader_compile(vs);
+
+  glShaderSource(fs, 1, &fs_src, nullptr);
+  glCompileShader(fs);
+  check_shader_compile(fs);
+
+  glAttachShader(program, vs);
+  glAttachShader(program, fs);
+
+  glLinkProgram(program);
+  check_program_link(program);
+
+  //glUseProgram(program);
+
+  GLuint arr{0};
+  glGenVertexArrays(1, &arr);
+  glBindVertexArray(arr);
+
+  GLuint buf{0};
+  glGenBuffers(1, &buf);
+  glBindBuffer(GL_ARRAY_BUFFER, buf);
+
+  const float o = 0.6;
+  float verts[2 * 3 * 2] = {
+    -o, -o,
+     o, -o,
+    -o,  o,
+
+     o, -o,
+    -o,  o,
+     o,  o
+  };
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 2 * 3 * 2,
+               verts, GL_STATIC_DRAW);
+
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, nullptr);
+
+  glDrawArrays(GL_TRIANGLES, 0, 2 * 3 * 2);
+
+  glDeleteShader(vs);
+  glDeleteShader(fs);
+  glDeleteProgram(program);
+
+  check_gl_error();
+
+  waffle_window_swap_buffers(window);
+
+  sleep(1);
 }
