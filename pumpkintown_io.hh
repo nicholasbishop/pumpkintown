@@ -3,8 +3,10 @@
 
 #include <cstdio>
 #include <cstdint>
+#include <fstream>
 #include <map>
 #include <string>
+#include <vector>
 
 #include "pumpkintown_function_id.hh"
 

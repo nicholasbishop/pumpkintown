@@ -92,68 +92,57 @@ class Exploder:
     def create_context(self, call):
         var = f'ctx{self.take_id()}'
         orig_share_ctx = call.fields.get('share_context')
-        share_ctx = 'nullptr'
+        share_ctx = 'null'
         if orig_share_ctx:
             share_ctx = self.context_map[orig_share_ctx].var
             res = self.context_map[orig_share_ctx].res
         else:
             res = Resources()
-        self.src.add(f'  auto {var} = waffle_context_create(config, {share_ctx});')
+        self.src.add(f'context_create {share_ctx} -> {var}')
         self.context_map[call.fields['return_value']] = Context(var, res)
 
     def make_context_current(self, call):
         orig_ctx = call.fields['ctx']
         if orig_ctx == 0:
-            context = 'nullptr'
+            context = 'null'
             self.ctx = None
         else:
             context = self.context_map[orig_ctx].var
             self.ctx = self.context_map[orig_ctx]
-        self.src.add(f'  waffle_make_current(display, window, {context});')
+        self.src.add(f'make_current {context}')
 
     def standard_gen(self, call):
         count = call.fields['n']
         var = f'id{self.take_id()}'
-        self.src.add(f'  GLuint {var}[{count}] = {{0}};')
-        self.src.add(f'  {call.func.name}({count}, {var});')
+        self.src.add(f'{call.func.name} {count} {var}')
 
     def standard_delete(self, call):
         # TODO
         pass
 
-    # TODO dedup with tex_image
     def buffer_data(self, call):
         index = self.take_id()
         save_name = self.save_raw('buf', index, call.fields['data'])
-        args = []
-        self.src.add('  {')
-        for param in call.func.params:
-            if param.name == 'data':
-                self.src.add(f'    const auto vec = read_all("{save_name}");')
-                args.append('vec.data()')
-            else:
-                args.append(str(call.fields[param.name]))
-        args = ', '.join(args)
-        self.src.add(f'    {call.func.name}({args});')
-        self.src.add('  }')
+        target = hex(call.fields['target'])
+        size = call.fields['size']
+        data = f'file:{save_name}'
+        usage = hex(call.fields['usage'])
+        self.src.add(f'glBufferData {target} {size} {data} {usage}')
 
     def tex_image(self, call):
         index = self.take_id()
         save_name = self.save_raw('tex', index, call.fields['pixels'])
         args = []
-        self.src.add('  {')
         for param in call.func.params:
             if param.name == 'pixels':
                 if call.fields['pixels_length'] == 0:
-                    args.append('nullptr')
+                    args.append('null')
                 else:
-                    self.src.add(f'    const auto vec = read_all("{save_name}");')
-                    args.append('vec.data()')
+                    args.append(f'file:{save_name}')
             else:
-                args.append(str(call.fields[param.name]))
-        args = ', '.join(args)
-        self.src.add(f'    {call.func.name}({args});')
-        self.src.add('  }')
+                args.append(hex(call.fields[param.name]))
+        args = ' '.join(args)
+        self.src.add(f'{call.func.name} {args}')
 
     def shader_source(self, call):
         index = self.take_id()
@@ -161,39 +150,33 @@ class Exploder:
                                   call.fields['source'].encode('utf-8'))
         shader = call.fields['shader']
         shader = self.ctx.res.shaders[shader]
-        self.src.add('  {')
-        self.src.add(f'    const auto vec = read_all("{save_path}");')
-        self.src.add(f'    const char* src = reinterpret_cast<const char*>(vec.data());')
-        self.src.add(f'    glShaderSource({shader}, 1, &src, nullptr);')
-        self.src.add('  }')
+        self.src.add(f'glShaderSource {shader} file:{save_path}')
 
     def program_binary(self, call):
         index = self.take_id()
         save_path = self.save_raw('program', index, call.fields['binary'])
-        self.src.add('  {')
-        self.src.add(f'    const auto vec = read_all("{save_path}");')
+        self.src.add(f'const auto vec = read_all("{save_path}");')
         fmt = call.fields['binaryFormat']
         length = call.fields['length']
         program = self.ctx.res.programs[call.fields['program']]
-        self.src.add(f'    glProgramBinary({program}, {fmt}, vec.data(), {length});')
-        self.src.add('  }')
+        self.src.add(f'glProgramBinary({program}, {fmt}, vec.data(), {length});')
 
     def standard_create(self, call):
         prefix = 'glCreate'
         name = call.func.name[len(prefix):].lower()
         args = []
         for param in call.func.params:
-            args.append(str(call.fields[param.name]))
-        args = ', '.join(args)
+            args.append(hex(call.fields[param.name]))
+        args = ' '.join(args)
         var = f'{name}{self.take_id()}'
-        self.src.add(f'  const auto {var} = {call.func.name}({args});')
+        self.src.add(f'{call.func.name} {args} -> {var}')
         self.ctx.res[name][call.return_value] = var
 
     def use_program(self, call):
         program = call.fields['program']
         if program != 0:
             program = self.ctx.res.programs[program]
-        self.src.add(f'  glUseProgram({program});')
+        self.src.add(f'glUseProgram {program}')
 
     def check_gl_errors(self, call):
         self.src.add('  check_gl_error();')
@@ -210,7 +193,7 @@ class Exploder:
 
     def handle_call(self, call):
         name = call.func.name
-        self.src.add(f'  fprintf(stderr, "{self.call_index} {name}\\n");')
+        #self.src.add(f'  fprintf(stderr, "{self.call_index} {name}\\n");')
 
         if self.enable_png_texture_dump and name in ('glTexSubImage2D', 'glTexImage2D'):
             self.save_texture_png(call)
@@ -239,7 +222,9 @@ class Exploder:
         elif name == 'glProgramBinary':
             self.program_binary(call)
         elif name in ('glXWaitGL', 'glXWaitX',
-                      'glXSwapIntervalMESA'):
+                      'glXSwapIntervalMESA',
+                      'eglGetCurrentContext',
+                      'eglGetCurrentSurface'):
             # TODO
             pass
         else:
@@ -254,30 +239,23 @@ class Exploder:
                 elif param.array:
                     arr = f'arr{self.take_id()}'
                     length = call.fields[f'{param.name}_length']
-                    init = ', '.join(str(elem) for elem in field)
-                    self.src.add(f'  const {param.array} {arr}[{length}] = {{{init}}};')
+                    values = ' '.join(str(elem) for elem in field)
+                    self.src.add(f'array {arr} {param.array} {values}')
                     args.append(arr)
                 elif param.offset:
-                    args.append(f'(const void*){field}')
+                    args.append(str(field))
                 elif isinstance(field, float):
                     args.append(str(field))
                 else:
                     args.append(hex(field))
-            args = ', '.join(args)
-            self.src.add(f'  {name}({args});')
-        self.check_gl_errors(call)
+            args = ' '.join(args)
+            self.src.add(f'{name} {args}')
+        #self.check_gl_errors(call)
         # if name == 'glDrawElements' and self.call_index > 25000:
         #     self.src.add(f'  capture("fbo{self.call_index}.png");')
         self.call_index += 1
 
     def explode(self):
-        self.src.add_cxx_include('vector', system=True)
-        self.src.add_cxx_include('epoxy/egl.h', system=True)
-        self.src.add_cxx_include('epoxy/gl.h', system=True)
-        self.src.add_cxx_include('waffle-1/waffle.h', system=True)
-        self.src.add_cxx_include('replay.hh')
-        self.src.add('void draw(waffle_display* display, waffle_window* window, waffle_config* config) {')
-
         try:
             while True:
                 call = self.reader.read()
@@ -286,9 +264,7 @@ class Exploder:
         except StopIteration:
             pass
 
-        self.src.add('}')
-
-        path = os.path.join(self.output, 'draw.cc')
+        path = os.path.join(self.output, 'trace')
         with open(path, 'w') as wfile:
             wfile.write(self.src.text())
 

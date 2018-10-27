@@ -406,6 +406,78 @@ def gen_replay_source():
     return src
 
 
+def gen_express_source():
+    src = Source()
+    src.add_cxx_include('epoxy/egl.h', system=True)
+    src.add_cxx_include('epoxy/gl.h', system=True)
+    src.add_cxx_include('pumpkintown_express.hh')
+    src.add('namespace pumpkintown {')
+    src.add('void Express::dispatch() {')
+    for func in FUNCTIONS:
+        if not func.is_replayable():
+            continue
+        # TODO
+        if func.name in ('glBindShadingRateImageNV',
+                         'glBufferAttachMemoryNV',
+                         'glDrawMeshTasksIndirectNV',
+                         'glDrawMeshTasksNV',
+                         'glFramebufferFetchBarrierEXT',
+                         'glMultiDrawMeshTasksIndirectCountNV',
+                         'glMultiDrawMeshTasksIndirectNV',
+                         'glNamedBufferAttachMemoryNV',
+                         'glNamedRenderbufferStorageMultisampleAdvancedAMD',
+                         'glRenderbufferStorageMultisampleAdvancedAMD',
+                         'glResetMemoryObjectParameterNV',
+                         'glScissorExclusiveNV',
+                         'glShadingRateImageBarrierNV',
+                         'glShadingRateSampleOrderNV',
+                         'glTexAttachMemoryNV',
+                         'glTextureAttachMemoryNV'):
+            continue
+        if func.name in ('eglCreateContext', 'eglMakeCurrent'):
+            continue
+        if func.name.startswith('glX'):
+            continue
+        src.add('  if (iter_.function() == "{}") {{'.format(func.name))
+        if func.name == 'glShaderSource':
+            src.add('    shader_source();')
+        else:
+            if func.name.startswith('glGen'):
+                src.add('    uint32_arrays_[arg(1)] = '
+                        'std::vector<uint32_t>{};')
+            args = []
+            for index, param in enumerate(func.params):
+                arg = 'arg({})'.format(index)
+                stype = param.ptype.stype
+                if param.array:
+                    args.append('{} == "null" ? nullptr : '
+                                '{}_arrays_.at({}).data()'.format(
+                        arg,
+                        param.array.replace('_t', ''), arg))
+                elif param.offset:
+                    args.append('to_offset({})'.format(arg))
+                elif stype and stype != 'const void*':
+                    args.append('to_{}({})'.format(
+                        stype.replace('_t', ''), arg))
+            args = ', '.join(args)
+            src.add('    {}({});'.format(func.name, args))
+        src.add('    return;')
+        src.add('  }')
+    src.add('  if (iter_.function() == "context_create") {')
+    src.add('    create_context();')
+    src.add('    return;')
+    src.add('  }')
+    src.add('  if (iter_.function() == "make_current") {')
+    src.add('    make_context_current();')
+    src.add('    return;')
+    src.add('  }')
+
+    src.add('  fprintf(stderr, "unhandled function: %s\\n", iter_.function().c_str());')
+    src.add('}')
+    src.add('}')
+    return src
+
+
 def gen_dump_cc():
     # Yes, this is Python code that generates C++ code that generates
     # C++ code. I'm sorry :(
@@ -490,6 +562,7 @@ def main():
 
     #gen_dump_cc().write(os.path.join(args.build_dir, 'pumpkintown_dump_gen.cc'))
     gen_replay_source().write(os.path.join(args.build_dir, 'pumpkintown_replay_gen.cc'))
+    gen_express_source().write(os.path.join(args.build_dir, 'pumpkintown_express_gen.cc'))
 
 
 if __name__ == '__main__':

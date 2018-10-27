@@ -22,6 +22,7 @@ add_custom_command(
 add_custom_command(
   OUTPUT
   #pumpkintown_dump_gen.cc
+  pumpkintown_express_gen.cc
   pumpkintown_function_id.hh
   pumpkintown_function_id.cc
   pumpkintown_function_structs.cc
@@ -69,6 +70,13 @@ add_executable(pumpkintown_replay
   pumpkintown_replay_gen.cc)
 
 target_link_libraries(pumpkintown_replay waffle-1)
+
+add_executable(pumpkintown_express
+  pumpkintown_express.cc
+  pumpkintown_express_gen.cc
+  pumpkintown/text_trace_iterator.cc)
+
+target_link_libraries(pumpkintown_express epoxy waffle-1)
 
 add_custom_command(TARGET pumpkintown POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy libpumpkintown.so gl/libGL.so.1)
