@@ -3,11 +3,83 @@
 #include <cstring>
 #include <sstream>
 
+#include <epoxy/gl.h>
 #include <waffle-1/waffle.h>
+
+#include "pumpkintown/parser.hh"
 
 namespace pumpkintown {
 
 namespace {
+
+void check_gl_error() {
+  const auto err = glGetError();
+  switch (err) {
+    case GL_NO_ERROR:
+      break;
+    case GL_INVALID_ENUM:
+      fprintf(stderr, "GL error: GL_INVALID_ENUM\n");
+      break;
+    case GL_INVALID_VALUE:
+      fprintf(stderr, "GL error: GL_INVALID_VALUE\n");
+      break;
+    case GL_INVALID_OPERATION:
+      fprintf(stderr, "GL error: GL_INVALID_OPERATION\n");
+      break;
+    case GL_INVALID_FRAMEBUFFER_OPERATION:
+      fprintf(stderr, "GL error: GL_INVALID_FRAMEBUFFER_OPERATION\n");
+      break;
+    case GL_OUT_OF_MEMORY:
+      fprintf(stderr, "GL error: GL_OUT_OF_MEMORY\n");
+      break;
+    default:
+      fprintf(stderr, "GL error: %d\n", err);
+      break;
+  }
+}
+
+void check_program_link(const GLuint program) {
+  GLint success = 0;
+  glGetProgramiv(program, GL_LINK_STATUS, &success);
+  if (success) {
+    return;
+  }
+
+  fprintf(stderr, "link failed:\n");
+
+  GLint length = 0;
+  glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
+  std::vector<char> log(length);
+  glGetProgramInfoLog(program, length, &length, log.data());
+
+  fprintf(stderr, "%s\n", log.data());
+}
+
+void check_shader_compile(const GLuint shader) {
+  // Print shader source
+  if (false) {
+    GLint srclen = 0;
+    glGetShaderiv(shader, GL_SHADER_SOURCE_LENGTH, &srclen);
+    std::vector<char> src(srclen);
+    glGetShaderSource(shader, srclen, &srclen, src.data());
+    fprintf(stderr, "shader source: %s\n", src.data());
+  }
+
+  GLint success = 0;
+  glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+  if (success) {
+    return;
+  }
+
+  fprintf(stderr, "compile failed:\n");
+
+  GLint length = 0;
+  glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
+  std::vector<char> log(length);
+  glGetShaderInfoLog(shader, length, &length, log.data());
+
+  fprintf(stderr, "%s\n", log.data());
+}
 
 std::vector<uint8_t> read_file(const std::string& path) {
   std::ifstream f{path};
@@ -98,7 +170,19 @@ void Express::replay() {
       }
     }
 
-    dispatch();
+    if (iter_.function() == "array") {
+      load_array();
+    } else {
+      dispatch();
+    }
+
+    if (iter_.function() == "glCompileShader") {
+      check_shader_compile(to_uint32(arg(0)));
+    } else if (iter_.function() == "glLinkProgram") {
+      check_program_link(to_uint32(arg(0)));
+    }
+
+    check_gl_error();
   }
 }
 
@@ -122,6 +206,114 @@ void Express::make_context_current() {
 }
 
 void Express::shader_source() {
+  const auto shader{vars_.at(arg(0)).as_uint32()};
+  const GLchar* src = reinterpret_cast<const char*>(
+      uint8_arrays_[arg(1)].data());
+  glShaderSource(shader, 1, &src, nullptr);
+}
+
+void Express::capture_fb(const std::string& path) {
+  GLint orig_read_fb{0}, orig_draw_fb{0};
+  glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &orig_read_fb);
+  glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &orig_draw_fb);
+
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, orig_draw_fb);
+
+  GLint type{0};
+  glGetFramebufferAttachmentParameteriv(
+      GL_READ_FRAMEBUFFER,
+      GL_COLOR_ATTACHMENT0,
+      GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE,
+      &type);
+
+  if (type != GL_TEXTURE) {
+    fprintf(stderr, "capture: attachment is not a texture\n");
+    return;
+  }
+
+  GLint tex_id{0};
+  glGetFramebufferAttachmentParameteriv(
+      GL_READ_FRAMEBUFFER,
+      GL_COLOR_ATTACHMENT0,
+      GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME,
+      &tex_id);
+
+  if (tex_id == 0) {
+    fprintf(stderr, "capture: bad texture ID\n");
+    return;
+  }
+
+  GLint tex_level{0};
+  glGetFramebufferAttachmentParameteriv(
+      GL_READ_FRAMEBUFFER,
+      GL_COLOR_ATTACHMENT0,
+      GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL,
+      &tex_level);
+
+  if (tex_level != 0) {
+    fprintf(stderr, "capture: bad texture level\n");
+    return;
+  }
+
+  GLint orig_tex{0};
+  glGetIntegerv(GL_TEXTURE_BINDING_2D, &orig_tex);
+
+  GLint width{0}, height{0};
+  glBindTexture(GL_TEXTURE_2D, tex_id);
+  glGetTexLevelParameteriv(GL_TEXTURE_2D, tex_level, GL_TEXTURE_WIDTH,
+                           &width);
+  glGetTexLevelParameteriv(GL_TEXTURE_2D, tex_level, GL_TEXTURE_HEIGHT,
+                           &height);
+  glBindTexture(GL_TEXTURE_2D, orig_tex);
+
+  const int comp = 4;
+  std::vector<uint8_t> pixels;
+  pixels.resize(width * height * comp);
+  glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, orig_read_fb);
+
+  check_gl_error();
+
+  bool boring = true;
+  for (const auto p : pixels) {
+    if (p != 0 && p != 255) {
+      boring = false;
+      break;
+    }
+  }
+
+  if (boring) {
+    return;
+  }
+
+  const int stride = width * 4;
+  stbi_write_png(path.c_str(), width, height, comp, pixels.data(), stride);
+}
+
+void Express::load_array() {
+#define LOAD_ARRAY(map_, type_, conv_)              \
+  map_[name] = std::vector<type_>();                \
+  auto& vec = map_[name];                           \
+  vec.resize(iter_.args().size() - 2);              \
+  for (size_t i{2}; i < iter_.args().size(); i++) { \
+    vec[i - 2] = conv_(arg(i));                     \
+  }
+
+  const auto& name = arg(0);
+  const auto& type = arg(1);
+  if (type == "float") {
+    LOAD_ARRAY(float_arrays_, float, to_float);
+  } else if (type == "char") {
+    LOAD_ARRAY(char_arrays_, char, to_char);
+  } else if (type == "int32_t") {
+    LOAD_ARRAY(int32_arrays_, int32_t, to_int32);
+  } else if (type == "uint32_t") {
+    LOAD_ARRAY(uint32_arrays_, uint32_t, to_uint32);
+  } else {
+    throw std::runtime_error("invalid array type: " + type);
+  }
+#undef LOAD_ARRAY
 }
 
 const void* Express::to_offset(const std::string& str) {
@@ -129,6 +321,13 @@ const void* Express::to_offset(const std::string& str) {
   uint64_t val;
   iss >> val;
   return reinterpret_cast<const void*>(val);
+}
+
+char Express::to_char(const std::string& str) {
+  std::istringstream iss{str};
+  char val;
+  iss >> val;
+  return val;
 }
 
 float Express::to_float(const std::string& str) {
@@ -160,10 +359,12 @@ int16_t Express::to_int16(const std::string& str) {
 }
 
 int32_t Express::to_int32(const std::string& str) {
-  std::istringstream iss{str};
-  int32_t val;
-  iss >> val;
-  return val;
+  NumberParser np{str};
+  if (np.is_symbolic()) {
+    return vars_[np.symbol()].as_int32();
+  } else {
+    return np.as_int32();
+  }
 }
 
 int64_t Express::to_int64(const std::string& str) {
@@ -188,10 +389,12 @@ uint16_t Express::to_uint16(const std::string& str) {
 }
 
 uint32_t Express::to_uint32(const std::string& str) {
-  std::istringstream iss{str};
-  uint32_t val;
-  iss >> val;
-  return val;
+  NumberParser np{str};
+  if (np.is_symbolic()) {
+    return vars_[np.symbol()].as_uint32();
+  } else {
+    return np.as_uint32();
+  }
 }
 
 uint64_t Express::to_uint64(const std::string& str) {

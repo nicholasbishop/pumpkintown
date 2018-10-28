@@ -24,6 +24,90 @@ def load_meta(args):
     FUNCTIONS = glmeta.FUNCTIONS
     ENUMS = glmeta.ENUMS
 
+
+@attr.s
+class AnyType:
+    ctype = attr.ib()
+
+    @property
+    def short_name(self):
+        return self.ctype.replace('_t', '')
+
+    @property
+    def enum_name(self):
+        name = self.short_name
+        if name == 'bool':
+            return 'Boolean'
+        elif name.startswith('uint'):
+            return name[0:2].upper() + name[2:]
+        else:
+            return name.capitalize()
+
+    @property
+    def union_name(self):
+        name = self.short_name
+        if 'int' in name:
+            return name
+        else:
+            return name[0]
+
+
+def gen_any_header():
+    types = [AnyType('bool'), AnyType('char'),
+             AnyType('float'), AnyType('double')]
+    for num in (8, 16, 32, 64):
+        types.append(AnyType('int{}_t'.format(num)))
+        types.append(AnyType('uint{}_t'.format(num)))
+
+    src = Source()
+    src.add_cxx_include('cstdint', system=True)
+    src.add_cxx_include('sstream', system=True)
+    src.add_cxx_include('string', system=True)
+    src.add('class Any {')
+    src.add(' public:')
+    src.add('  enum class Type {')
+    for typ in types:
+        src.add('    {},'.format(typ.enum_name))
+    src.add('  };')
+    # Constructors
+    src.add('  Any() = default;')
+    for typ in types:
+        src.add('  Any(const {} value) : type_(Type::{}) {{'.format(
+            typ.ctype, typ.enum_name))
+        src.add('    value_.{} = value;'.format(typ.union_name))
+        src.add('  }')
+    # Accessors
+    for typ in types:
+        src.add('  {} as_{}() const {{'.format(typ.ctype, typ.short_name))
+        src.add('    if (type_ != Type::{}) {{'.format(typ.enum_name))
+        src.add('      throw std::runtime_error("wrong Any type");')
+        src.add('    }')
+        src.add('    return value_.{};'.format(typ.union_name))
+        src.add('  }')
+    # String conversion
+    src.add('  std::string to_string() const {')
+    src.add('    std::ostringstream ss;')
+    src.add('    switch (type_) {')
+    for typ in types:
+        src.add('    case Type::{}:'.format(typ.enum_name))
+        src.add('      ss << value_.{};'.format(typ.union_name))
+        src.add('      return ss.str();')
+    src.add('    }')
+    src.add('    return "error";')
+    src.add('  }')
+    src.add(' private:')
+    # Union
+    src.add('  union {')
+    for typ in types:
+        src.add('    {} {};'.format(typ.ctype, typ.union_name))
+    src.add('  } value_;')
+    # Discriminator
+    src.add('  Type type_;')
+    src.add('};')
+    src.add_guard('PUMPKINTOWN_ANY_HH_')
+    return src
+
+
 def gen_exports():
     lines = ['extern "C" {']
     for func in FUNCTIONS:
@@ -445,6 +529,7 @@ def gen_express_source():
             if func.name.startswith('glGen'):
                 src.add('    uint32_arrays_[arg(1)] = '
                         'std::vector<uint32_t>{};')
+                src.add('    uint32_arrays_[arg(1)].resize(to_uint32(arg(0)));')
             args = []
             for index, param in enumerate(func.params):
                 arg = 'arg({})'.format(index)
@@ -460,7 +545,10 @@ def gen_express_source():
                     args.append('to_{}({})'.format(
                         stype.replace('_t', ''), arg))
             args = ', '.join(args)
-            src.add('    {}({});'.format(func.name, args))
+            capture = ''
+            if func.has_return():
+                capture = 'vars_[iter_.return_value()] = '
+            src.add('    {}{}({});'.format(capture, func.name, args))
         src.add('    return;')
         src.add('  }')
     src.add('  if (iter_.function() == "context_create") {')
@@ -545,6 +633,8 @@ def main():
     args = parser.parse_args()
 
     load_meta(args)
+
+    gen_any_header().write(os.path.join(args.build_dir, 'pumpkintown_any.hh'))
 
     gen_trace_source().write(os.path.join(args.build_dir, 'pumpkintown_trace_gen.cc'))
     gen_trace_header().write(os.path.join(args.build_dir, 'pumpkintown_trace_gen.hh'))

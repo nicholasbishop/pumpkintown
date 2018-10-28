@@ -74,6 +74,7 @@ target_link_libraries(pumpkintown_replay waffle-1)
 add_executable(pumpkintown_express
   pumpkintown_express.cc
   pumpkintown_express_gen.cc
+  pumpkintown/parser.cc
   pumpkintown/text_trace_iterator.cc)
 
 target_link_libraries(pumpkintown_express epoxy waffle-1)

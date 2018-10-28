@@ -6,6 +6,7 @@
 #include <string>
 
 #include "pumpkintown/text_trace_iterator.hh"
+#include "pumpkintown_any.hh"
 
 struct waffle_config;
 struct waffle_context;
@@ -31,7 +32,12 @@ class Express {
 
   void shader_source();
 
+  void capture_fb(const std::string& path);
+
+  void load_array();
+
   const void* to_offset(const std::string& str);
+  char to_char(const std::string& str);
   float to_float(const std::string& str);
   double to_double(const std::string& str);
   int8_t to_int8(const std::string& str);
@@ -49,6 +55,7 @@ class Express {
   waffle_window* window_{nullptr};
 
   std::map<std::string, waffle_context*> contexts_;
+  std::map<std::string, Any> vars_;
   std::map<std::string, std::vector<char>> char_arrays_;
   std::map<std::string, std::vector<float>> float_arrays_;
   std::map<std::string, std::vector<int32_t>> int32_arrays_;

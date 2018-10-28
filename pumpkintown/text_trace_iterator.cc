@@ -29,6 +29,10 @@ TextTraceIterator::TextTraceIterator(const std::string& path)
     : file_(path) {}
 
 bool TextTraceIterator::next() {
+  function_.clear();
+  args_.clear();
+  return_value_.clear();
+
   std::string line;
   if (!std::getline(file_, line)) {
     return false;
