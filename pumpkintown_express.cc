@@ -8,6 +8,9 @@
 
 #include "pumpkintown/parser.hh"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 namespace pumpkintown {
 
 namespace {
@@ -83,6 +86,10 @@ void check_shader_compile(const GLuint shader) {
 
 std::vector<uint8_t> read_file(const std::string& path) {
   std::ifstream f{path};
+  if (!f.is_open()) {
+    throw std::runtime_error("file not found");
+  }
+
   f.seekg(0, std::ios::end);
   const auto size{f.tellg()};
 
