@@ -87,7 +87,7 @@ class Exploder:
         path = os.path.join(self.output, name)
         with open(path, 'wb') as wfile:
             wfile.write(data)
-        return path
+        return name
 
     def create_context(self, call):
         var = f'ctx{self.take_id()}'

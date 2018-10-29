@@ -5,6 +5,7 @@
 #include <map>
 #include <string>
 
+#include "pumpkintown/path.hh"
 #include "pumpkintown/text_trace_iterator.hh"
 #include "pumpkintown_any.hh"
 
@@ -17,7 +18,7 @@ namespace pumpkintown {
 
 class Express {
  public:
-  explicit Express(const std::string& path);
+  explicit Express(const Path& path);
 
   void replay();
 
@@ -61,6 +62,8 @@ class Express {
   std::map<std::string, std::vector<int32_t>> int32_arrays_;
   std::map<std::string, std::vector<uint8_t>> uint8_arrays_;
   std::map<std::string, std::vector<uint32_t>> uint32_arrays_;
+
+  Path dir_;
 };
 
 }

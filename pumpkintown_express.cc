@@ -7,6 +7,7 @@
 #include <waffle-1/waffle.h>
 
 #include "pumpkintown/parser.hh"
+#include "pumpkintown/path.hh"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
@@ -84,10 +85,10 @@ void check_shader_compile(const GLuint shader) {
   fprintf(stderr, "%s\n", log.data());
 }
 
-std::vector<uint8_t> read_file(const std::string& path) {
-  std::ifstream f{path};
+std::vector<uint8_t> read_file(const Path& path) {
+  std::ifstream f{path.value()};
   if (!f.is_open()) {
-    throw std::runtime_error("file not found");
+    throw std::runtime_error("file not found: " + path.value());
   }
 
   f.seekg(0, std::ios::end);
@@ -103,8 +104,8 @@ std::vector<uint8_t> read_file(const std::string& path) {
 
 }
 
-Express::Express(const std::string& path)
-    : iter_{path} {
+Express::Express(const Path& path)
+    : iter_{path.value()}, dir_{path.parent()} {
   int32_t platform = WAFFLE_PLATFORM_GLX;
   int32_t api = WAFFLE_CONTEXT_OPENGL;
   int32_t major = 4;
@@ -173,7 +174,7 @@ void Express::replay() {
 
     for (const auto& arg : iter_.args()) {
       if (arg.substr(0, 5) == "file:") {
-        uint8_arrays_[arg] = read_file(arg.substr(5));
+        uint8_arrays_[arg] = read_file(dir_.append(arg.substr(5)));
       }
     }
 
@@ -418,6 +419,6 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  pumpkintown::Express express(argv[1]);
+  pumpkintown::Express express(pumpkintown::Path{argv[1]});
   express.replay();
 }
